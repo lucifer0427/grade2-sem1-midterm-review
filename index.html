@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>國小二年級期中考：3D 實況滿貫王</title>
+  <title>國小二年級期中考：3D 實況滿貫王 3.0 傳奇魔王篇</title>
   <link rel="stylesheet" href="./css/style.css">
 
   <script type="importmap">
@@ -19,22 +19,26 @@
   <!-- 3D 棒球場渲染畫布 -->
   <div id="canvas-container"></div>
 
-  <!-- 實況野球級：巨型大字橫幅特效 (HOME RUN / GRAND SLAM / DOUBLE / OUT) -->
-  <div id="big-banner" class="banner-hidden">💥 HOME RUN!</div>
+  <!-- 實況野球級：巨型大字橫幅 + Statcast 飛行距離測速儀 -->
+  <div id="big-banner" class="banner-hidden">
+    <div id="banner-main">💥 HOME RUN!</div>
+    <div id="banner-statcast">📏 飛行距離：145 公尺 | 初速：172 km/h</div>
+  </div>
 
   <!-- 頂部電視轉播計分板與題目看板 -->
   <div id="jumbotron-hud">
     <div class="scoreboard-top">
-      <!-- 左側：局數、球種與稱號 -->
+      <!-- 左側：局數、魔王投手資訊與球種 -->
       <div class="tv-left-group">
         <div class="inning-badge" id="hud-inning">1局上</div>
+        <div class="boss-badge" id="hud-boss">🐻 森林暴熊隊長</div>
         <div class="pitch-badge" id="hud-pitch-type">🔥 148km 火球</div>
-        <div class="rank-badge" id="hud-rank">🌱 少棒新秀</div>
       </div>
 
-      <!-- 中央：得分、連擊 Combo、出局燈號與鑽石壘包圖 -->
+      <!-- 中央：得分、金幣、連擊、出局燈號與鑽石壘包圖 -->
       <div class="tv-center-group">
         <div class="score-pill">得分 <b id="hud-score">0</b></div>
+        <div class="coin-pill" title="答對賺取金幣解鎖神兵球棒！">💰 <b id="hud-coins">0</b></div>
         <div class="combo-pill" id="hud-combo">COMBO x0</div>
         <div class="outs-pill">
           OUT
@@ -50,14 +54,15 @@
         </div>
       </div>
 
-      <!-- 右側：科目切換、錯題特訓、語音與音效 -->
+      <!-- 右側：神兵球棒店、科目切換、錯題特訓、語音與音效 -->
       <div class="hud-controls">
+        <button class="hud-btn btn-shop" id="btn-open-shop">🏏 球棒商店</button>
         <select id="select-mode" class="hud-select">
           <option value="all">⚾ 綜合大滿貫 (100題)</option>
           <option value="chinese">📖 康軒國語 (50題)</option>
           <option value="math">🔢 翰林數學 (50題)</option>
         </select>
-        <button class="hud-btn btn-wrong hidden" id="btn-wrong-mode">🎯 錯題特訓 (0)</button>
+        <button class="hud-btn btn-wrong hidden" id="btn-wrong-mode">🎯 錯題 (0)</button>
         <button class="hud-btn" id="btn-speak" title="朗讀題目">📢 念題</button>
         <button class="hud-btn" id="btn-mute" title="音效開關">🔊</button>
       </div>
@@ -71,11 +76,22 @@
     </div>
   </div>
 
-  <!-- 底部打擊控制區：動態甜蜜點力量槽 + 左中右揮棒大按鍵 -->
+  <!-- 底部打擊控制區：戰術技能卡 + 動態甜蜜點力量槽 + 左中右揮棒大按鍵 -->
   <div id="batting-controls">
+    <!-- 戰術道具與必殺技支援列 -->
+    <div class="tactical-bar">
+      <button class="skill-btn" id="btn-skill-5050" title="消耗 20 金幣，刪去一個錯誤球路！">
+        🕵️ 球探透視卡 <span class="skill-cost">(💰20 刪去一錯)</span>
+      </button>
+      <button class="skill-btn skill-fever" id="btn-skill-fever" title="消耗 40 金幣，本棒覺醒黃金氣場 100% 必出全壘打！">
+        🔥 巨砲必殺覺醒 <span class="skill-cost">(💰40 必轟全壘打)</span>
+      </button>
+      <div class="equipped-bat-tag" id="hud-bat-name">裝備：🪵 新手木棒</div>
+    </div>
+
     <!-- 擊球力量與甜蜜點瞄準條 -->
     <div class="power-bar-wrapper">
-      <div class="power-bar-label">⚡ 擊球甜蜜點時機 (瞄準紅心打出全壘打！)</div>
+      <div class="power-bar-label">⚡ 擊球甜蜜點時機 (瞄準中央紅心揮棒轟出全壘打！)</div>
       <div class="power-bar-track">
         <div class="zone-single">安打區</div>
         <div class="zone-double">二壘打</div>
@@ -88,6 +104,18 @@
 
     <!-- 左、中、右外野揮棒按鈕 -->
     <div id="options-container"></div>
+  </div>
+
+  <!-- 🏏 神兵球棒商店彈窗 -->
+  <div id="shop-modal" class="modal-overlay hidden">
+    <div class="modal-card shop-card">
+      <h2 class="modal-title" style="color: #facc15;">🏏 傳奇神兵球棒商店</h2>
+      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 12px;">
+        目前擁有金幣：<b style="color: #facc15; font-size: 20px;" id="shop-coin-count">0</b> 💰（答對題目即可賺取金幣！）
+      </p>
+      <div class="shop-grid" id="shop-items-container"></div>
+      <button class="action-btn" id="btn-close-shop" style="margin-top: 14px;">回到球場 ⚾</button>
+    </div>
   </div>
 
   <!-- 單球結果與教練戰術提示彈窗 -->

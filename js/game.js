@@ -1,5 +1,10 @@
 /**
- * 次世代 3D 實況滿貫王：主遊戲引擎 (Three.js + 動態追球運鏡 + 壘包推進 + 錯題牛棚特訓)
+ * 3D 實況滿貫王 3.0 傳奇魔王篇：主遊戲引擎
+ * 包含：
+ * - 3 大魔王投手與日/昏/夜動態球場
+ * - 金幣與 4 把 3D 神兵球棒商店 (LocalStorage 自動存檔)
+ * - 球探透視刪去卡 & 巨砲必殺覺醒氣場
+ * - Statcast 擊球飛行距離測速 + 打者真實繞壘奔跑動畫
  */
 import * as THREE from 'three';
 import confetti from 'canvas-confetti';
@@ -11,38 +16,71 @@ const PITCH_TYPES = [
   { name: '🔥 152km 火焰直球', speed: 32, curve: 0 },
   { name: '⚡ 138km 閃電滑球', speed: 38, curve: 1.4 },
   { name: '🌈 118km 彩虹曲球', speed: 44, curve: -1.3 },
-  { name: '👑 160km 魔球指叉', speed: 28, curve: 0.7 }
+  { name: '👑 162km 龍焰魔球', speed: 29, curve: 0.85 }
+];
+
+const BOSS_STAGES = [
+  { name: '🐻 森林暴熊隊長', stageIdx: 0 },
+  { name: '🐸 閃電忍蛙・疾風丸', stageIdx: 1 },
+  { name: '🐉 黃金巨龍・凱撒王', stageIdx: 2 }
+];
+
+const BAT_SHOP_ITEMS = [
+  {
+    id: 'wood',
+    name: '🪵 新手木棒',
+    price: 0,
+    desc: '標準少棒木棒，手感紮實穩定。'
+  },
+  {
+    id: 'thunder',
+    name: '⚡ 雷神黃金棒',
+    price: 60,
+    desc: '純金打造的閃電球棒！全壘打紅心甜蜜點擴大 50%！'
+  },
+  {
+    id: 'dragon',
+    name: '🔥 烈焰龍魂棒',
+    price: 120,
+    desc: '燃燒藍色龍焰！答對保底二壘長打以上，每棒額外 +15 金幣！'
+  },
+  {
+    id: 'rainbow',
+    name: '🌈 星際彩虹神棒',
+    price: 200,
+    desc: '傳說中的宇宙神兵！答對 100% 必轟全壘打，且金幣獎勵雙倍！'
+  }
 ];
 
 export class GameEngine {
   constructor() {
     this.container = document.getElementById('canvas-container');
-    this.currentMode = 'all'; // 'all' | 'chinese' | 'math' | 'wrong'
+    this.currentMode = 'all';
     this.questions = [];
-    this.wrongQuestions = []; // 錯題牛棚紀錄
+    this.wrongQuestions = [];
     this.currentQuestionIdx = 0;
 
-    // 棒球賽況狀態
+    // 載入玩家金幣與已解鎖球棒存檔 (初次遊玩贈送 40 開局金幣！)
+    this.loadPlayerSave();
+
     this.score = 0;
     this.outs = 0;
     this.hits = 0;
     this.homeRuns = 0;
     this.combo = 0;
-    this.bases = [false, false, false]; // [一壘, 二壘, 三壘]
+    this.bases = [false, false, false];
+    this.isFeverActive = false;
 
-    // 動畫與動態相機狀態
     this.isAnimating = false;
     this.clock = new THREE.Clock();
-    this.powerPos = 0.5; // 力量槽游標位置 (0.0 ~ 1.0)
+    this.powerPos = 0.5;
     this.powerDir = 1;
 
-    // 預設本壘越肩視角
     this.defaultCamPos = new THREE.Vector3(-1.3, 3.8, 33.8);
     this.defaultCamLook = new THREE.Vector3(0, 2.5, 5);
     this.currentCamLook = this.defaultCamLook.clone();
-    this.cameraMode = 'batting'; // 'batting' | 'follow_ball'
+    this.cameraMode = 'batting';
 
-    // 計時器引用 (防切換競態)
     this.pitchTimer = null;
     this.flyTimer = null;
     this.feedbackTimer = null;
@@ -50,9 +88,34 @@ export class GameEngine {
 
     this.initThree();
     this.field = new BaseballField(this.scene);
+    this.field.equipBatSkin(this.equippedBat);
     this.setupEvents();
     this.startNewGame('all');
     this.animate();
+  }
+
+  loadPlayerSave() {
+    try {
+      const savedCoins = localStorage.getItem('g2_baseball_coins');
+      this.coins = savedCoins !== null ? parseInt(savedCoins, 10) : 40;
+      const savedBats = localStorage.getItem('g2_baseball_bats');
+      this.unlockedBats = savedBats ? JSON.parse(savedBats) : ['wood'];
+      this.equippedBat = localStorage.getItem('g2_baseball_equipped') || 'wood';
+    } catch {
+      this.coins = 40;
+      this.unlockedBats = ['wood'];
+      this.equippedBat = 'wood';
+    }
+  }
+
+  savePlayerData() {
+    try {
+      localStorage.setItem('g2_baseball_coins', String(this.coins));
+      localStorage.setItem('g2_baseball_bats', JSON.stringify(this.unlockedBats));
+      localStorage.setItem('g2_baseball_equipped', this.equippedBat);
+    } catch {
+      // 忽略無痕模式寫入限制
+    }
   }
 
   initThree() {
@@ -95,6 +158,7 @@ export class GameEngine {
   startNewGame(mode = 'all') {
     this.clearTimers();
     this.isAnimating = false;
+    this.isFeverActive = false;
     this.field.isCrowdCheering = false;
     this.cameraMode = 'batting';
     this.currentMode = mode;
@@ -108,7 +172,6 @@ export class GameEngine {
     this.currentQuestionIdx = 0;
 
     if (mode === 'wrong' && this.wrongQuestions.length > 0) {
-      // 牛棚錯題特訓模式
       this.questions = shuffleArray(this.wrongQuestions).map(q => ({
         ...q,
         options: shuffleArray(q.options)
@@ -125,37 +188,38 @@ export class GameEngine {
     this.loadQuestion(0);
   }
 
-  // 更新計分板、壘包燈號、出局紅燈與稱號
   updateScoreboardUI() {
     document.getElementById('hud-score').textContent = this.score;
+    document.getElementById('hud-coins').textContent = this.coins;
     document.getElementById('hud-combo').textContent = `COMBO x${this.combo}`;
 
-    // 出局燈號
     document.getElementById('out-1').classList.toggle('active', this.outs >= 1);
     document.getElementById('out-2').classList.toggle('active', this.outs >= 2);
 
-    // 鑽石壘包亮燈
     document.getElementById('ui-base-1').classList.toggle('active', this.bases[0]);
     document.getElementById('ui-base-2').classList.toggle('active', this.bases[1]);
     document.getElementById('ui-base-3').classList.toggle('active', this.bases[2]);
 
-    // 同步 3D 球場壘上跑者
     this.field.updateBaseRunners(this.bases);
 
-    // 晉升稱號
-    const rankEl = document.getElementById('hud-rank');
-    if (this.score >= 12) rankEl.textContent = '👑 大聯盟 MVP';
-    else if (this.score >= 7) rankEl.textContent = '🔥 台灣巨砲';
-    else if (this.score >= 3) rankEl.textContent = '⚡ 校隊四番';
-    else rankEl.textContent = '🌱 少棒新秀';
+    const batObj = BAT_SHOP_ITEMS.find(b => b.id === this.equippedBat) || BAT_SHOP_ITEMS[0];
+    document.getElementById('hud-bat-name').textContent = `裝備：${batObj.name}`;
 
-    // 錯題特訓按鈕顯示
     const wrongBtn = document.getElementById('btn-wrong-mode');
     if (this.wrongQuestions.length > 0) {
       wrongBtn.classList.remove('hidden');
-      wrongBtn.textContent = `🎯 錯題特訓 (${this.wrongQuestions.length})`;
+      wrongBtn.textContent = `🎯 錯題 (${this.wrongQuestions.length})`;
     } else {
       wrongBtn.classList.add('hidden');
+    }
+
+    // 更新技能按鈕可用狀態
+    const btn5050 = document.getElementById('btn-skill-5050');
+    const btnFever = document.getElementById('btn-skill-fever');
+    if (btn5050) btn5050.disabled = this.coins < 20 || this.isAnimating;
+    if (btnFever) {
+      btnFever.disabled = this.coins < 40 || this.isFeverActive || this.isAnimating;
+      btnFever.classList.toggle('active-fever', this.isFeverActive);
     }
   }
 
@@ -167,17 +231,26 @@ export class GameEngine {
     return escaped.replace(/\[([^\]]+)\]/g, '<span class="highlight-char">$1</span>');
   }
 
-  // 顯示實況野球大字橫幅
-  showBigBanner(text, color = '#fef08a') {
+  showBigBanner(mainText, statcastText = '', color = '#fef08a') {
     const banner = document.getElementById('big-banner');
-    banner.textContent = text;
-    banner.style.color = color;
+    const mainEl = document.getElementById('banner-main');
+    const statEl = document.getElementById('banner-statcast');
+
+    mainEl.textContent = mainText;
+    mainEl.style.color = color;
+    if (statcastText) {
+      statEl.textContent = statcastText;
+      statEl.classList.remove('hidden');
+    } else {
+      statEl.classList.add('hidden');
+    }
+
     banner.classList.remove('banner-hidden');
 
     if (this.bannerTimer) clearTimeout(this.bannerTimer);
     this.bannerTimer = setTimeout(() => {
       banner.classList.add('banner-hidden');
-    }, 1800);
+    }, 2100);
   }
 
   loadQuestion(idx) {
@@ -189,17 +262,21 @@ export class GameEngine {
     this.currentQuestionIdx = idx;
     const q = this.questions[idx];
 
-    // 隨機決定本球球種
+    // 依局數切換魔王投手與日/昏/夜球場天色 (0~2局:暴熊, 3~5局:忍蛙, 6~8局:巨龍)
+    const bossStage = Math.min(2, Math.floor(idx / 3));
+    const bossInfo = BOSS_STAGES[bossStage];
+    document.getElementById('hud-boss').textContent = bossInfo.name;
+    this.field.setBossPitcherStyle(bossStage);
+    this.field.setStadiumAtmosphere(bossStage);
+
     this.currentPitch = PITCH_TYPES[Math.floor(Math.random() * PITCH_TYPES.length)];
     document.getElementById('hud-pitch-type').textContent = this.currentPitch.name;
 
-    // 更新題目 HUD
     document.getElementById('hud-subject').textContent = `【${q.subject}】${q.unit}`;
     document.getElementById('hud-question').innerHTML = this.formatQuestionHTML(q.question);
     document.getElementById('hud-phonetic').textContent = q.phonetic || '';
-    document.getElementById('hud-inning').textContent = `${idx + 1}局上 / 共${this.questions.length}局`;
+    document.getElementById('hud-inning').textContent = `${idx + 1}局上`;
 
-    // 渲染三個外野揮棒按鈕
     const optionsContainer = document.getElementById('options-container');
     optionsContainer.innerHTML = '';
 
@@ -209,6 +286,7 @@ export class GameEngine {
     q.options.forEach((opt, optIdx) => {
       const btn = document.createElement('button');
       btn.className = 'batting-btn';
+      btn.dataset.idx = optIdx;
       btn.innerHTML = `
         <span class="btn-zone">${directions[optIdx]} [${keys[optIdx]}]</span>
         <span class="btn-text">${opt.text}</span>
@@ -218,36 +296,81 @@ export class GameEngine {
     });
 
     this.resetPositions();
+    this.updateScoreboardUI();
     soundCtrl.speakText(`${q.subject}，${q.question}`);
   }
 
   resetPositions() {
     this.cameraMode = 'batting';
     this.field.isCrowdCheering = false;
+    this.field.resetBatterToBox();
+    if (this.field.batterGroup.feverAura) {
+      this.field.batterGroup.feverAura.visible = this.isFeverActive;
+    }
     this.field.ball.position.set(0, 2.2, 15);
     this.field.pitcherGroup.position.y = 0.45;
     this.field.pitcherGroup.rotation.x = 0;
     this.field.batGroup.rotation.set(Math.PI / 7, 0, -Math.PI / 5);
   }
 
-  // 依據力量槽游標位置與連擊數，決定安打類型 (1: 一壘打, 2: 二壘打, 4: 全壘打)
-  evaluateHitBases() {
-    const distFromCenter = Math.abs(this.powerPos - 0.5);
-    // 落在中央紅心甜蜜區 (0.37 ~ 0.63) 或連擊 >= 2 直接全壘打！
-    if (distFromCenter <= 0.14 || this.combo >= 2) {
-      return 4; // HOME RUN
-    } else if (distFromCenter <= 0.28) {
-      return 2; // DOUBLE 二壘安打
-    }
-    return 1; // SINGLE 一壘安打
+  // 使用「🕵️ 球探透視卡」刪去一個錯誤選項
+  useScout5050Skill() {
+    if (this.coins < 20 || this.isAnimating) return;
+    const q = this.questions[this.currentQuestionIdx];
+    const buttons = Array.from(document.querySelectorAll('.batting-btn'));
+
+    // 找出尚未被刪去的錯誤選項按鈕
+    const wrongBtns = buttons.filter((b, i) => !q.options[i].isCorrect && !b.disabled);
+    if (wrongBtns.length === 0) return;
+
+    this.coins -= 20;
+    this.savePlayerData();
+
+    const targetBtn = wrongBtns[Math.floor(Math.random() * wrongBtns.length)];
+    targetBtn.disabled = true;
+    targetBtn.classList.add('eliminated-opt');
+    document.getElementById('btn-skill-5050').disabled = true;
+
+    soundCtrl.playPitchSound();
+    this.updateScoreboardUI();
   }
 
-  // 推進壘包並計算打點 (RBI)
+  // 使用「🔥 巨砲必殺覺醒」下一棒保底全壘打
+  useFeverSkill() {
+    if (this.coins < 40 || this.isFeverActive || this.isAnimating) return;
+    this.coins -= 40;
+    this.isFeverActive = true;
+    this.savePlayerData();
+
+    if (this.field.batterGroup.feverAura) {
+      this.field.batterGroup.feverAura.visible = true;
+    }
+    soundCtrl.playOrganCharge();
+    this.showBigBanner('🔥 黃金巨砲覺醒！本棒必出全壘打！', '', '#facc15');
+    this.updateScoreboardUI();
+  }
+
+  // 依據力量槽、球棒加成與必殺覺醒，判定安打壘包數
+  evaluateHitBases() {
+    if (this.isFeverActive || this.equippedBat === 'rainbow') {
+      return 4; // 必出全壘打！
+    }
+
+    const distFromCenter = Math.abs(this.powerPos - 0.5);
+    const sweetSpotRadius = this.equippedBat === 'thunder' ? 0.22 : 0.14;
+
+    if (distFromCenter <= sweetSpotRadius || this.combo >= 2) {
+      return 4; // HOME RUN
+    } else if (distFromCenter <= 0.28 || this.equippedBat === 'dragon') {
+      return 2; // DOUBLE 二壘打
+    }
+    return 1; // SINGLE 一壘打
+  }
+
   advanceRunners(hitBases) {
     let runsScored = 0;
     const newBases = [false, false, false];
 
-    // 原本在壘上的跑者推進
     for (let i = 2; i >= 0; i--) {
       if (this.bases[i]) {
         const destBase = i + hitBases;
@@ -259,9 +382,8 @@ export class GameEngine {
       }
     }
 
-    // 打者本身推進
     if (hitBases >= 4) {
-      runsScored++; // 全壘打打者自己也得 1 分
+      runsScored++;
     } else {
       newBases[hitBases - 1] = true;
     }
@@ -271,7 +393,6 @@ export class GameEngine {
     return runsScored;
   }
 
-  // 學童揮棒決策
   handleSwing(option, zoneIdx) {
     if (this.isAnimating) return;
     this.isAnimating = true;
@@ -281,7 +402,6 @@ export class GameEngine {
 
     soundCtrl.playPitchSound();
 
-    // 投手高壓抬腿投球動作與魔球弧線飛行
     const ball = this.field.ball;
     const startPos = new THREE.Vector3(0, 2.3, 15);
     const targetOffset = (zoneIdx - 1) * 0.85;
@@ -293,11 +413,8 @@ export class GameEngine {
 
     this.pitchTimer = setInterval(() => {
       progress += 1 / pitchFrames;
-
-      // 投手前傾投球動畫
       this.field.pitcherGroup.rotation.x = Math.sin(progress * Math.PI) * 0.45;
 
-      // 計算變化球橫向偏移與火焰殘影
       ball.position.lerpVectors(startPos, hitPos, progress);
       ball.position.x += Math.sin(progress * Math.PI) * curveAmount;
       ball.position.y += Math.sin(progress * Math.PI) * 0.8;
@@ -311,16 +428,13 @@ export class GameEngine {
     }, 16);
   }
 
-  // 擊球瞬間判定與運鏡切換
   executeContact(option, zoneIdx) {
-    // 球棒強力揮擊動作
     this.field.batGroup.rotation.z = Math.PI / 2.2;
     this.field.batGroup.rotation.y = -Math.PI / 2.2;
 
     const currentQ = this.questions[this.currentQuestionIdx];
 
     if (option.isCorrect) {
-      // 答對！判定是安打、二壘打還是全壘打
       this.hits++;
       this.combo++;
       const hitBases = this.evaluateHitBases();
@@ -328,9 +442,19 @@ export class GameEngine {
       const wasBasesLoaded = this.bases[0] && this.bases[1] && this.bases[2];
       const rbi = this.advanceRunners(hitBases);
 
-      if (isHR) this.homeRuns++;
+      // 計算金幣獎勵
+      let earnedCoins = isHR ? (wasBasesLoaded ? 80 : 40) : hitBases === 2 ? 25 : 15;
+      if (this.equippedBat === 'dragon') earnedCoins += 15;
+      if (this.equippedBat === 'rainbow') earnedCoins *= 2;
+      this.coins += earnedCoins;
+      this.savePlayerData();
 
-      // 若此題原本在錯題特訓名單中，答對後從錯題庫移除！
+      if (isHR) {
+        this.homeRuns++;
+        this.field.startBatterVictoryRun(); // 打者真實繞壘奔跑動畫！
+      }
+
+      this.isFeverActive = false;
       this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
 
       this.updateScoreboardUI();
@@ -338,53 +462,53 @@ export class GameEngine {
       this.field.spawnHitSparks(this.field.ball.position, isHR);
       this.field.isCrowdCheering = true;
 
-      // 畫面震動特效
       document.body.classList.add('screen-shake');
-      setTimeout(() => document.body.classList.remove('screen-shake'), 360);
+      setTimeout(() => document.body.classList.remove('screen-shake'), 380);
 
-      // 決定實況大字橫幅
-      let bannerText = '⚾ 一壘安打 SINGLE!';
+      // 計算 Statcast 飛行距離與初速
+      const distMeters = isHR ? Math.floor(125 + Math.random() * 42) : hitBases === 2 ? Math.floor(85 + Math.random() * 25) : Math.floor(45 + Math.random() * 25);
+      const exitVel = isHR ? Math.floor(162 + Math.random() * 22) : Math.floor(125 + Math.random() * 25);
+      const statcastStr = `📏 飛行距離：${distMeters} 公尺 ｜ ⚡ 擊球初速：${exitVel} km/h ｜ 💰 +${earnedCoins} 金幣`;
+
+      let bannerText = '⚾ 穿越安打 SINGLE!';
       if (isHR && wasBasesLoaded) bannerText = '👑 滿貫全壘打 GRAND SLAM! (+4分)';
       else if (isHR && rbi > 1) bannerText = `💥 ${rbi}分全壘打 HOME RUN!`;
-      else if (isHR) bannerText = '💥 陽春全壘打 HOME RUN!';
-      else if (hitBases === 2) bannerText = `🔥 深遠二壘安打 DOUBLE! (+${rbi}分)`;
-      else if (rbi > 0) bannerText = `⚾ 適時安打! (+${rbi}分)`;
+      else if (isHR) bannerText = '💥 超大號全壘打 HOME RUN!';
+      else if (hitBases === 2) bannerText = `🔥 深遠二壘長打 DOUBLE!`;
 
-      this.showBigBanner(bannerText, isHR ? '#fef08a' : '#38bdf8');
+      this.showBigBanner(bannerText, statcastStr, isHR ? '#fef08a' : '#38bdf8');
 
       if (isHR) {
-        confetti({ particleCount: 90, spread: 80, origin: { y: 0.55 } });
+        confetti({ particleCount: 95, spread: 85, origin: { y: 0.55 } });
       }
 
-      // 啟動高空追球運鏡動畫
       this.animateHitBallFlight(zoneIdx, hitBases, () => {
-        const extraMsg = rbi > 0 ? `<br>🏆 <b>本棒打點：+${rbi} 分！</b>（目前 ${this.combo} 連擊！）` : `<br>🏃 <b>成功推進上壘！</b>（下一棒瞄準紅心轟回來！）`;
+        const extraMsg = `<br>📏 <b>飛行距離：${distMeters}m（初速 ${exitVel}km/h）</b><br>💰 <b>獲得賞金：+${earnedCoins} 金幣！</b>（連擊 COMBO x${this.combo}）`;
         this.showFeedbackModal(
           true,
           `<b>${bannerText}</b><br>${option.hitResult}${extraMsg}`,
-          isHR ? `全壘打！得到 ${rbi} 分！` : `漂亮安打！`
+          isHR ? `全壘打！飛行距離 ${distMeters} 公尺！` : `漂亮安打！`
         );
       });
 
     } else {
-      // 答錯：好球揮棒落空 OUT！
       soundCtrl.playMissSound();
       this.combo = 0;
       this.outs++;
+      this.isFeverActive = false;
 
-      // 加入牛棚錯題特訓庫 (避免重複加入)
       if (!this.wrongQuestions.some(wq => wq.id === currentQ.id)) {
         this.wrongQuestions.push(currentQ);
       }
 
       let outNotice = '';
       if (this.outs >= 3) {
-        outNotice = '<br><br>⚠️ <b>三出局攻守交換（壘上跑者殘壘清空）！</b>';
+        outNotice = '<br><br>⚠️ <b>三出局攻守交換（壘上跑者清空）！</b>';
         this.outs = 0;
         this.bases = [false, false, false];
-        this.showBigBanner('❌ 三出局 3 OUTS!', '#ef4444');
+        this.showBigBanner('❌ 三出局 3 OUTS!', '', '#ef4444');
       } else {
-        this.showBigBanner('⚡ 揮棒落空 STRIKE OUT!', '#ef4444');
+        this.showBigBanner('⚡ 揮棒落空 STRIKE OUT!', '', '#ef4444');
       }
 
       this.updateScoreboardUI();
@@ -399,14 +523,13 @@ export class GameEngine {
     }
   }
 
-  // 飛球軌跡 + 動態追球運鏡 (Follow-Ball Camera)
   animateHitBallFlight(zoneIdx, hitBases, onComplete) {
     this.cameraMode = 'follow_ball';
     const ball = this.field.ball;
     const start = ball.position.clone();
 
     const distZ = hitBases === 4 ? -55 : hitBases === 2 ? -18 : 0;
-    const peakY = hitBases === 4 ? 24 : hitBases === 2 ? 10 : 4.5;
+    const peakY = hitBases === 4 ? 25 : hitBases === 2 ? 10 : 4.5;
     const targetX = (zoneIdx - 1) * (hitBases === 4 ? 26 : 15);
     const dest = new THREE.Vector3(targetX, hitBases === 4 ? 14 : 0.3, distZ);
 
@@ -426,6 +549,60 @@ export class GameEngine {
         onComplete();
       }
     }, 16);
+  }
+
+  // 渲染神兵球棒商店
+  openBatShop() {
+    document.getElementById('shop-coin-count').textContent = this.coins;
+    const container = document.getElementById('shop-items-container');
+    container.innerHTML = '';
+
+    BAT_SHOP_ITEMS.forEach(item => {
+      const isUnlocked = this.unlockedBats.includes(item.id);
+      const isEquipped = this.equippedBat === item.id;
+
+      const card = document.createElement('div');
+      card.className = `shop-item ${isEquipped ? 'equipped' : ''}`;
+
+      let btnLabel = '';
+      let btnDisabled = false;
+      if (isEquipped) {
+        btnLabel = '✅ 裝備中';
+        btnDisabled = true;
+      } else if (isUnlocked) {
+        btnLabel = '裝備此球棒';
+      } else {
+        btnLabel = `💰 ${item.price} 金幣解鎖`;
+        btnDisabled = this.coins < item.price;
+      }
+
+      card.innerHTML = `
+        <div class="shop-item-title">${item.name}</div>
+        <div class="shop-item-desc">${item.desc}</div>
+        <button class="shop-buy-btn" ${btnDisabled ? 'disabled' : ''}>${btnLabel}</button>
+      `;
+
+      const btn = card.querySelector('.shop-buy-btn');
+      btn.onclick = () => {
+        if (!isUnlocked) {
+          if (this.coins < item.price) return;
+          this.coins -= item.price;
+          this.unlockedBats.push(item.id);
+          soundCtrl.playOrganCharge();
+        } else {
+          soundCtrl.playPitchSound();
+        }
+        this.equippedBat = item.id;
+        this.field.equipBatSkin(item.id);
+        this.savePlayerData();
+        this.updateScoreboardUI();
+        this.openBatShop(); // 重新刷新商店狀態
+      };
+
+      container.appendChild(card);
+    });
+
+    document.getElementById('shop-modal').classList.remove('hidden');
   }
 
   showFeedbackModal(isSuccess, messageHtml, speechText) {
@@ -453,7 +630,12 @@ export class GameEngine {
     document.getElementById('final-avg').textContent = avg;
     document.getElementById('final-hr').textContent = this.homeRuns;
     document.getElementById('final-score').textContent = this.score;
-    document.getElementById('final-rank-title').textContent = `獲得稱號：${document.getElementById('hud-rank').textContent}`;
+
+    let rankTitle = '🌱 少棒新秀';
+    if (this.score >= 12) rankTitle = '👑 期中大聯盟傳奇 MVP';
+    else if (this.score >= 7) rankTitle = '🔥 台灣無雙巨砲';
+    else if (this.score >= 3) rankTitle = '⚡ 校隊黃金四番';
+    document.getElementById('final-rank-title').textContent = `獲得稱號：${rankTitle}（累計金幣：💰${this.coins}）`;
 
     const wrongSummary = document.getElementById('final-wrong-summary');
     const finalWrongBtn = document.getElementById('btn-final-wrong');
@@ -462,7 +644,7 @@ export class GameEngine {
       wrongSummary.innerHTML = `📋 本場共有 <b style="color:#f87171">${this.wrongQuestions.length} 題</b> 揮空失誤，快進「錯題特訓」把它們全部轟出全壘打！`;
       finalWrongBtn.classList.remove('hidden');
     } else {
-      wrongSummary.innerHTML = `🎉 <b>完美零失誤完封對手！你已經徹底掌握期中考重點！</b>`;
+      wrongSummary.innerHTML = `🎉 <b>完美零失誤擊潰三大魔王！你已經徹底稱霸期中考！</b>`;
       finalWrongBtn.classList.add('hidden');
     }
 
@@ -484,12 +666,19 @@ export class GameEngine {
       muteBtn.textContent = soundCtrl.isMuted ? '🔇' : '🔊';
     };
 
+    document.getElementById('btn-open-shop').onclick = () => this.openBatShop();
+    document.getElementById('btn-close-shop').onclick = () => {
+      document.getElementById('shop-modal').classList.add('hidden');
+    };
+
+    document.getElementById('btn-skill-5050').onclick = () => this.useScout5050Skill();
+    document.getElementById('btn-skill-fever').onclick = () => this.useFeverSkill();
+
     document.getElementById('btn-next').onclick = () => this.nextQuestion();
     document.getElementById('btn-restart').onclick = () => {
       this.startNewGame(this.currentMode === 'wrong' ? 'all' : this.currentMode);
     };
 
-    // 啟動牛棚錯題特訓
     const startWrongTraining = () => {
       if (this.wrongQuestions.length > 0) {
         this.startNewGame('wrong');
@@ -507,6 +696,14 @@ export class GameEngine {
     }
 
     window.addEventListener('keydown', (e) => {
+      const shopModal = document.getElementById('shop-modal');
+      if (!shopModal.classList.contains('hidden')) {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+          shopModal.classList.add('hidden');
+        }
+        return;
+      }
+
       const feedbackModal = document.getElementById('feedback-modal');
       const finalModal = document.getElementById('final-modal');
 
@@ -531,9 +728,10 @@ export class GameEngine {
       const q = this.questions[this.currentQuestionIdx];
       if (!q) return;
 
-      if (key === 'A' && q.options[0]) this.handleSwing(q.options[0], 0);
-      if (key === 'S' && q.options[1]) this.handleSwing(q.options[1], 1);
-      if (key === 'D' && q.options[2]) this.handleSwing(q.options[2], 2);
+      const btns = document.querySelectorAll('.batting-btn');
+      if (key === 'A' && q.options[0] && !btns[0]?.disabled) this.handleSwing(q.options[0], 0);
+      if (key === 'S' && q.options[1] && !btns[1]?.disabled) this.handleSwing(q.options[1], 1);
+      if (key === 'D' && q.options[2] && !btns[2]?.disabled) this.handleSwing(q.options[2], 2);
     });
   }
 
@@ -541,7 +739,6 @@ export class GameEngine {
     requestAnimationFrame(() => this.animate());
     const elapsed = this.clock.getElapsedTime();
 
-    // 1. 更新底部甜蜜點力量游標擺動
     if (!this.isAnimating) {
       this.powerPos += 0.014 * this.powerDir;
       if (this.powerPos >= 0.98) { this.powerPos = 0.98; this.powerDir = -1; }
@@ -549,13 +746,10 @@ export class GameEngine {
       const cursor = document.getElementById('power-cursor');
       if (cursor) cursor.style.left = `${this.powerPos * 100}%`;
 
-      // 打者準備打擊呼吸律動
       this.field.batGroup.rotation.z = -Math.PI / 5 + Math.sin(elapsed * 5) * 0.06;
     }
 
-    // 2. 動態運鏡平滑插值 (Lerp Camera)
     if (this.cameraMode === 'follow_ball') {
-      // 高空追球視角：拉高拉遠並注視飛行中的棒球
       const targetCamPos = new THREE.Vector3(
         this.field.ball.position.x * 0.35,
         12.5,
@@ -565,15 +759,12 @@ export class GameEngine {
       this.currentCamLook.lerp(this.field.ball.position, 0.12);
       this.camera.lookAt(this.currentCamLook);
     } else {
-      // 本壘打擊越肩視角
       this.camera.position.lerp(this.defaultCamPos, 0.08);
       this.currentCamLook.lerp(this.defaultCamLook, 0.08);
       this.camera.lookAt(this.currentCamLook);
     }
 
-    // 3. 更新球場粒子、觀眾歡呼與守備律動
     this.field.updateEffects(elapsed);
-
     this.renderer.render(this.scene, this.camera);
   }
 }
