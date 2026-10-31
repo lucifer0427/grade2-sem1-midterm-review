@@ -1,4 +1,4 @@
-const CACHE_NAME = 'g2-midterm-3d-v4';
+const CACHE_NAME = 'g2-midterm-3d-v5';
 
 const CORE_ASSETS = [
   './',
@@ -16,6 +16,7 @@ const CORE_ASSETS = [
   './js/minecraftWorld.js',
   './js/minecraftSpecialModes.js',
   './js/minecraftAudio.js',
+  './js/gameplayUpgrades.js',
   './js/curriculum.js',
   './js/guidedTeaching.js',
   './js/questions/chinese.js',

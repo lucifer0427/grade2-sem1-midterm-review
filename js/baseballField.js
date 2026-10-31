@@ -37,6 +37,8 @@ export class BaseballField {
     this.createFielders();
     this.createRunnersPool();
     this.createBallTrail();
+    this.createPetCompanionGroup();
+    this.createStadiumUpgradeStructures();
   }
 
   createLights() {
@@ -609,6 +611,218 @@ export class BaseballField {
     }
   }
 
+  // 建立打擊區旁的 3D 隨身神獸寵物夥伴 (柴犬/暴龍/機甲捕手/迷你神龍)
+  createPetCompanionGroup() {
+    this.petRoot = new THREE.Group();
+    this.petRoot.position.set(-2.95, 0, 26.8);
+    this.petRoot.rotation.y = Math.PI / 6;
+    this.scene.add(this.petRoot);
+    this.petModels = {};
+
+    // 1. 🐕 黃金柴犬球僮 (shiba)
+    const shiba = new THREE.Group();
+    const goldFur = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5 });
+    const whiteFur = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.5 });
+    const collarMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.65, 1.05), goldFur);
+    body.position.y = 0.55;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.68, 0.72), goldFur);
+    head.position.set(0, 1.05, 0.42);
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.3, 0.35), whiteFur);
+    snout.position.set(0, 0.95, 0.82);
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 4), goldFur);
+    earL.position.set(-0.22, 1.48, 0.38);
+    const earR = earL.clone();
+    earR.position.x = 0.22;
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.14, 0.76), collarMat);
+    collar.position.set(0, 0.78, 0.36);
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), whiteFur);
+    tail.position.set(0, 0.82, -0.58);
+    shiba.add(body, head, snout, earL, earR, collar, tail);
+    shiba.visible = false;
+    this.petRoot.add(shiba);
+    this.petModels.shiba = shiba;
+
+    // 2. 🦖 暴龍強打教練 (dino)
+    const dino = new THREE.Group();
+    const dinoMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.4 });
+    const spineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const dBody = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.95), dinoMat);
+    dBody.position.y = 0.75;
+    const dHead = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.72, 1.15), dinoMat);
+    dHead.position.set(0, 1.55, 0.35);
+    const dTail = new THREE.Mesh(new THREE.ConeGeometry(0.38, 1.2, 6), dinoMat);
+    dTail.rotation.x = -Math.PI / 2.4;
+    dTail.position.set(0, 0.55, -0.85);
+    const dSpine = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.35, 0.8), spineMat);
+    dSpine.position.set(0, 1.98, 0.15);
+    dino.add(dBody, dHead, dTail, dSpine);
+    dino.visible = false;
+    this.petRoot.add(dino);
+    this.petModels.dino = dino;
+
+    // 3. 🤖 機甲雷達機器人 (robo)
+    const robo = new THREE.Group();
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7, roughness: 0.2 });
+    const visorMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const rBody = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.42, 0.95, 12), metalMat);
+    rBody.position.y = 0.7;
+    const rHead = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.62, 0.68), metalMat);
+    rHead.position.y = 1.45;
+    const rVisor = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.22, 0.1), visorMat);
+    rVisor.position.set(0, 1.48, 0.35);
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.45, 8), visorMat);
+    antenna.position.set(0, 1.92, 0);
+    robo.add(rBody, rHead, rVisor, antenna);
+    robo.visible = false;
+    this.petRoot.add(robo);
+    this.petModels.robo = robo;
+
+    // 4. 🐉 迷你烈焰神龍 (minidragon)
+    const dragon = new THREE.Group();
+    const dragMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x991b1b, emissiveIntensity: 0.45 });
+    const wingMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
+    const drBody = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 12), dragMat);
+    drBody.position.y = 1.1;
+    const drHead = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.55, 0.75), dragMat);
+    drHead.position.set(0, 1.65, 0.38);
+    const wingL = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.65), wingMat);
+    wingL.position.set(-0.7, 1.35, 0);
+    wingL.rotation.y = 0.3;
+    const wingR = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.65), wingMat);
+    wingR.position.set(0.7, 1.35, 0);
+    wingR.rotation.y = -0.3;
+    dragon.add(drBody, drHead, wingL, wingR);
+    dragon.userData = { wingL, wingR };
+    dragon.visible = false;
+    this.petRoot.add(dragon);
+    this.petModels.minidragon = dragon;
+  }
+
+  setPetCompanion(petId) {
+    if (!this.petModels) return;
+    Object.keys(this.petModels).forEach(k => {
+      this.petModels[k].visible = (k === petId);
+    });
+  }
+
+  // 建立 3D 球場擴建設施 (摩天輪 / 黃金噴火煙火塔 / 外星飛碟轉播艇 / 傳奇黃金雕像)
+  createStadiumUpgradeStructures() {
+    this.stadiumUpgrades = {};
+
+    // 1. 🎡 外野摩天輪樂園 (ferris_wheel)
+    const ferrisGroup = new THREE.Group();
+    const wheelRim = new THREE.Mesh(
+      new THREE.TorusGeometry(10.5, 0.45, 12, 32),
+      new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+    );
+    wheelRim.position.y = 16;
+    const wheelWheel = new THREE.Group();
+    wheelWheel.position.y = 16;
+    const spokeMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const cabColors = [0x38bdf8, 0x4ade80, 0xfacc15, 0xa855f7, 0xf97316, 0xec4899, 0xef4444, 0x22d3ee];
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 21, 8), spokeMat);
+      spoke.rotation.z = ang;
+      wheelWheel.add(spoke);
+      const cab = new THREE.Mesh(
+        new THREE.SphereGeometry(1.15, 10, 10),
+        new THREE.MeshBasicMaterial({ color: cabColors[i] })
+      );
+      cab.position.set(Math.cos(ang) * 10.5, Math.sin(ang) * 10.5, 0.6);
+      wheelWheel.add(cab);
+    }
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+    const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.7, 17, 8), legMat);
+    legL.position.set(-4.5, 8, 0);
+    legL.rotation.z = -0.24;
+    const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.7, 17, 8), legMat);
+    legR.position.set(4.5, 8, 0);
+    legR.rotation.z = 0.24;
+    ferrisGroup.add(wheelRim, wheelWheel, legL, legR);
+    ferrisGroup.position.set(-34, 4, -46);
+    ferrisGroup.rotation.y = 0.35;
+    ferrisGroup.userData = { wheelWheel };
+    ferrisGroup.visible = false;
+    this.scene.add(ferrisGroup);
+    this.stadiumUpgrades.ferris_wheel = ferrisGroup;
+
+    // 2. 🎆 黃金噴火煙火塔 (fire_towers)
+    const fireTowers = new THREE.Group();
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.7, roughness: 0.2 });
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    this.flameOrbs = [];
+    [-19, 19].forEach(xPos => {
+      const tGroup = new THREE.Group();
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 16, 12), pillarMat);
+      col.position.y = 8;
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 1.1, 1.8, 12), pillarMat);
+      bowl.position.y = 16.5;
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(1.7, 4.5, 10), flameMat);
+      flame.position.y = 19.2;
+      this.flameOrbs.push(flame);
+      tGroup.add(col, bowl, flame);
+      tGroup.position.set(xPos, 0, -47);
+      fireTowers.add(tGroup);
+    });
+    fireTowers.visible = false;
+    this.scene.add(fireTowers);
+    this.stadiumUpgrades.fire_towers = fireTowers;
+
+    // 3. 🛸 外星飛碟轉播艇 (ufo_blimp)
+    const ufoGroup = new THREE.Group();
+    const saucer = new THREE.Mesh(
+      new THREE.CylinderGeometry(5.5, 5.5, 1.2, 24),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 })
+    );
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(2.8, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.5),
+      new THREE.MeshBasicMaterial({ color: 0xa7f3d0, transparent: true, opacity: 0.85 })
+    );
+    dome.position.y = 0.5;
+    const beam = new THREE.Mesh(
+      new THREE.ConeGeometry(4.5, 16, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+    );
+    beam.position.y = -8.5;
+    ufoGroup.add(saucer, dome, beam);
+    ufoGroup.position.set(28, 25, -35);
+    ufoGroup.visible = false;
+    this.scene.add(ufoGroup);
+    this.stadiumUpgrades.ufo_blimp = ufoGroup;
+
+    // 4. 👑 傳奇名人堂黃金雕像 (gold_statue)
+    const statueGroup = new THREE.Group();
+    const basePedestal = new THREE.Mesh(
+      new THREE.BoxGeometry(5.5, 5.0, 5.5),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 })
+    );
+    basePedestal.position.y = 2.5;
+    const goldBatter = this.buildPlayerMesh(0xfacc15, true);
+    goldBatter.scale.setScalar(2.6);
+    goldBatter.position.y = 5.0;
+    goldBatter.uniformMaterials.forEach(m => {
+      m.color.setHex(0xfacc15);
+      m.emissive.setHex(0xca8a04);
+      m.emissiveIntensity = 0.45;
+      m.metalness = 0.85;
+    });
+    statueGroup.add(basePedestal, goldBatter);
+    statueGroup.position.set(34, 4, -44);
+    statueGroup.rotation.y = -0.35;
+    statueGroup.visible = false;
+    this.scene.add(statueGroup);
+    this.stadiumUpgrades.gold_statue = statueGroup;
+  }
+
+  updateStadiumBuilds(unlockedBuilds = []) {
+    if (!this.stadiumUpgrades) return;
+    Object.keys(this.stadiumUpgrades).forEach(id => {
+      this.stadiumUpgrades[id].visible = unlockedBuilds.includes(id);
+    });
+  }
+
   updateEffects(time) {
     this.trailParticles.forEach(p => {
       if (p.material.opacity > 0) {
@@ -668,5 +882,35 @@ export class BaseballField {
     this.fielders.forEach(f => {
       f.position.y = Math.abs(Math.sin(time * 4 + f.userData.phase)) * 0.12;
     });
+
+    // 3D 隨身寵物跳動與拍翅動畫
+    if (this.petRoot) {
+      this.petRoot.position.y = Math.abs(Math.sin(time * 6)) * 0.28;
+      this.petRoot.rotation.y = Math.PI / 6 + Math.sin(time * 3) * 0.15;
+      const md = this.petModels?.minidragon;
+      if (md && md.visible && md.userData.wingL) {
+        md.userData.wingL.rotation.z = Math.sin(time * 10) * 0.45;
+        md.userData.wingR.rotation.z = -Math.sin(time * 10) * 0.45;
+      }
+    }
+
+    // 3D 球場擴建設施動態效果
+    if (this.stadiumUpgrades) {
+      const fw = this.stadiumUpgrades.ferris_wheel;
+      if (fw && fw.visible && fw.userData.wheelWheel) {
+        fw.userData.wheelWheel.rotation.z = time * 0.45;
+      }
+      if (this.flameOrbs && this.stadiumUpgrades.fire_towers?.visible) {
+        this.flameOrbs.forEach((f, idx) => {
+          f.scale.setScalar(1 + Math.sin(time * 12 + idx) * 0.22);
+        });
+      }
+      const ufo = this.stadiumUpgrades.ufo_blimp;
+      if (ufo && ufo.visible) {
+        ufo.position.x = 26 + Math.sin(time * 1.2) * 10;
+        ufo.position.y = 25 + Math.cos(time * 2.4) * 1.5;
+        ufo.rotation.y = time * 1.5;
+      }
+    }
   }
 }

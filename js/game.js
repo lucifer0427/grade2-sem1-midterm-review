@@ -19,6 +19,15 @@ import {
   renderStrikeZoneGrid,
   generateAndDownloadPlayerCard
 } from './specialModes.js';
+import {
+  BASEBALL_PETS,
+  BASEBALL_STADIUM_BUILDS,
+  rollRandomEncounter,
+  runBaseballSwingQTE,
+  openRoguelikeDraftModal,
+  renderFloatingTargetsOverlay,
+  openPetAndBuildModal
+} from './gameplayUpgrades.js';
 
 const PITCH_TYPES = [
   { name: '🔥 152km 火焰直球', speed: 32, curve: 0 },
@@ -69,8 +78,9 @@ export class GameEngine {
     this.seenQuestionIds = new Set();
     this.currentQuestionIdx = 0;
     this.isStrikeZoneGridActive = false;
+    this.balloonModeState = 'auto'; // 'auto': 每兩題穿插, 'on': 全開, 'off': 關閉
 
-    // 載入玩家金幣、球棒、錯題本、已讀題池與球衣背號存檔
+    // 載入玩家金幣、球棒、3D寵物、3D球場設施、錯題本、已讀題池與球衣背號存檔
     this.loadPlayerSave();
 
     this.score = 0;
@@ -85,6 +95,16 @@ export class GameEngine {
     this.eliminatedIndices = new Set();
     this.isGuidedRetryPending = false;
     this.lastGuideData = null;
+
+    // 5.0 Roguelike 肉鴿天賦與隨機突發事件狀態
+    this.roguelikeBuffs = new Set();
+    this.activeBuffLabels = [];
+    this.eagleEyeCharges = 0;
+    this.ironShieldCharges = 0;
+    this.draftedStages = new Set();
+    this.currentEncounter = null;
+    this.blitzSecondsLeft = 0;
+    this.blitzTimer = null;
 
     this.isAnimating = false;
     this.clock = new THREE.Clock();
@@ -105,6 +125,8 @@ export class GameEngine {
     this.field = new BaseballField(this.scene);
     this.field.equipBatSkin(this.equippedBat);
     this.field.updateBatterJerseyNumber(this.jerseyNumber);
+    this.field.setPetCompanion(this.equippedPet);
+    this.field.updateStadiumBuilds(this.unlockedBuilds);
     this.setupEvents();
     this.startNewGame('all');
     this.animate();
@@ -113,10 +135,17 @@ export class GameEngine {
   loadPlayerSave() {
     try {
       const savedCoins = localStorage.getItem('g2_baseball_coins');
-      this.coins = savedCoins !== null ? parseInt(savedCoins, 10) : 40;
+      this.coins = savedCoins !== null ? parseInt(savedCoins, 10) : 60;
       const savedBats = localStorage.getItem('g2_baseball_bats');
       this.unlockedBats = savedBats ? JSON.parse(savedBats) : ['wood'];
       this.equippedBat = localStorage.getItem('g2_baseball_equipped') || 'wood';
+
+      // 載入 3D 隨身神獸寵物與外野球場設施
+      const savedPets = localStorage.getItem('g2_baseball_pets');
+      this.unlockedPets = savedPets ? JSON.parse(savedPets) : ['shiba'];
+      this.equippedPet = localStorage.getItem('g2_baseball_pet_equipped') || 'shiba';
+      const savedBuilds = localStorage.getItem('g2_baseball_builds');
+      this.unlockedBuilds = savedBuilds ? JSON.parse(savedBuilds) : [];
 
       // 載入選手名字與背號
       this.playerName = localStorage.getItem('g2_baseball_player_name') || '台灣小巨砲';
@@ -135,9 +164,12 @@ export class GameEngine {
         this.seenQuestionIds = new Set(JSON.parse(savedSeenIds));
       }
     } catch {
-      this.coins = 40;
+      this.coins = 60;
       this.unlockedBats = ['wood'];
       this.equippedBat = 'wood';
+      this.unlockedPets = ['shiba'];
+      this.equippedPet = 'shiba';
+      this.unlockedBuilds = [];
       this.playerName = '台灣小巨砲';
       this.jerseyNumber = '99';
     }
@@ -148,6 +180,9 @@ export class GameEngine {
       localStorage.setItem('g2_baseball_coins', String(this.coins));
       localStorage.setItem('g2_baseball_bats', JSON.stringify(this.unlockedBats));
       localStorage.setItem('g2_baseball_equipped', this.equippedBat);
+      localStorage.setItem('g2_baseball_pets', JSON.stringify(this.unlockedPets));
+      localStorage.setItem('g2_baseball_pet_equipped', this.equippedPet);
+      localStorage.setItem('g2_baseball_builds', JSON.stringify(this.unlockedBuilds));
       localStorage.setItem('g2_baseball_player_name', this.playerName);
       localStorage.setItem('g2_baseball_jersey_num', String(this.jerseyNumber));
       localStorage.setItem('g2_baseball_wrong_ids', JSON.stringify(this.wrongQuestions.map(q => q.id)));
@@ -192,6 +227,7 @@ export class GameEngine {
     if (this.flyTimer) { clearInterval(this.flyTimer); this.flyTimer = null; }
     if (this.feedbackTimer) { clearTimeout(this.feedbackTimer); this.feedbackTimer = null; }
     if (this.bannerTimer) { clearTimeout(this.bannerTimer); this.bannerTimer = null; }
+    if (this.blitzTimer) { clearInterval(this.blitzTimer); this.blitzTimer = null; }
   }
 
   startNewGame(mode = 'all') {
@@ -203,6 +239,14 @@ export class GameEngine {
     this.cameraMode = 'batting';
     this.currentMode = mode;
 
+    // 重置單場 Roguelike 天賦狀態
+    this.roguelikeBuffs = new Set();
+    this.activeBuffLabels = [];
+    this.eagleEyeCharges = 0;
+    this.ironShieldCharges = 0;
+    this.draftedStages = new Set();
+    this.currentEncounter = null;
+
     const modeSelect = document.getElementById('select-mode');
     if (modeSelect) modeSelect.value = mode;
 
@@ -211,7 +255,9 @@ export class GameEngine {
     this.hits = 0;
     this.homeRuns = 0;
     this.combo = 0;
-    this.bases = [false, false, false];
+    // 若已建造「傳奇名人堂黃金雕像」，開局直接保送一壘跑者！
+    const hasStatue = this.unlockedBuilds.includes('gold_statue');
+    this.bases = [hasStatue, false, false];
     this.currentQuestionIdx = 0;
 
     if (mode === 'wrong' && this.wrongQuestions.length > 0) {
@@ -250,7 +296,8 @@ export class GameEngine {
     this.field.updateBaseRunners(this.bases);
 
     const batObj = BAT_SHOP_ITEMS.find(b => b.id === this.equippedBat) || BAT_SHOP_ITEMS[0];
-    document.getElementById('hud-bat-name').textContent = `裝備：${batObj.name}`;
+    const petObj = BASEBALL_PETS.find(p => p.id === this.equippedPet) || BASEBALL_PETS[0];
+    document.getElementById('hud-bat-name').textContent = `裝備：${batObj.name} ｜ 寵物：${petObj.icon}`;
 
     const wrongBtn = document.getElementById('btn-wrong-mode');
     if (this.wrongQuestions.length > 0) {
@@ -264,6 +311,7 @@ export class GameEngine {
     const btn5050 = document.getElementById('btn-skill-5050');
     const btnFever = document.getElementById('btn-skill-fever');
     const btnGrid = document.getElementById('btn-toggle-pitchgrid');
+    const btnBalloon = document.getElementById('btn-toggle-balloon');
     if (btn5050) btn5050.disabled = this.coins < 20 || this.used5050ThisTurn || this.isAnimating;
     if (btnFever) {
       btnFever.disabled = this.coins < 40 || this.isFeverActive || this.isAnimating;
@@ -273,6 +321,82 @@ export class GameEngine {
       btnGrid.classList.toggle('active-grid', this.isStrikeZoneGridActive);
       btnGrid.textContent = this.isStrikeZoneGridActive ? '🎯 九宮格好球帶：開啟中' : '🎯 九宮格好球帶：關閉';
     }
+    if (btnBalloon) {
+      const labelMap = {
+        auto: '🎈 飛天氣球：自動穿插',
+        on: '🎈 飛天氣球：全開中',
+        off: '🎈 飛天氣球：關閉'
+      };
+      btnBalloon.textContent = labelMap[this.balloonModeState] || labelMap.auto;
+      btnBalloon.classList.toggle('active-grid', this.balloonModeState !== 'off');
+    }
+
+    this.renderActiveBuffsBar();
+  }
+
+  renderActiveBuffsBar() {
+    const bar = document.getElementById('active-buffs-bar');
+    if (!bar) return;
+    const tags = [];
+    const petObj = BASEBALL_PETS.find(p => p.id === this.equippedPet);
+    if (petObj) {
+      tags.push(`<span class="buff-pill buff-pet">${petObj.name} (+${petObj.bonusCoins}💰)</span>`);
+    }
+    if (this.unlockedBuilds.length > 0) {
+      tags.push(`<span class="buff-pill buff-build">🎡 球場設施 x${this.unlockedBuilds.length}</span>`);
+    }
+    this.activeBuffLabels.forEach(lbl => {
+      tags.push(`<span class="buff-pill buff-rogue">${this.escapeHTML(lbl)}</span>`);
+    });
+    if (this.ironShieldCharges > 0) {
+      tags.push(`<span class="buff-pill buff-shield">🛡️ 免出局護盾 x${this.ironShieldCharges}</span>`);
+    }
+    if (this.eagleEyeCharges > 0) {
+      tags.push(`<span class="buff-pill buff-rogue">🦅 鷹眼透視 x${this.eagleEyeCharges}</span>`);
+    }
+    if (this.currentEncounter) {
+      const blitzStr = this.blitzSecondsLeft > 0 ? ` (${this.blitzSecondsLeft}s)` : '';
+      tags.push(`<span class="buff-pill buff-event">${this.escapeHTML(this.currentEncounter.title)}${blitzStr}</span>`);
+    }
+    bar.innerHTML = tags.join('');
+  }
+
+  isBalloonActiveForCurrentTurn() {
+    if (this.isStrikeZoneGridActive) return false;
+    if (this.balloonModeState === 'on') return true;
+    if (this.balloonModeState === 'off') return false;
+    return this.currentQuestionIdx % 2 === 1;
+  }
+
+  refreshFloatingBalloons() {
+    const q = this.questions[this.currentQuestionIdx];
+    renderFloatingTargetsOverlay({
+      active: this.isBalloonActiveForCurrentTurn(),
+      edition: 'baseball',
+      question: q,
+      eliminatedIndices: this.eliminatedIndices,
+      onSelectOption: (opt, optIdx) => this.handleSwing(opt, optIdx)
+    });
+  }
+
+  applyRoguelikeCard(card) {
+    this.roguelikeBuffs.add(card.id);
+    this.activeBuffLabels.push(`${card.icon} ${card.name}`);
+
+    if (card.id === 'ghost_runners') {
+      this.bases[1] = true;
+      this.bases[2] = true;
+    } else if (card.id === 'eagle_eye') {
+      this.eagleEyeCharges += 2;
+    } else if (card.id === 'iron_shield') {
+      this.ironShieldCharges += 1;
+      this.coins += 35;
+      this.savePlayerData();
+    }
+
+    soundCtrl.playOrganCharge();
+    this.showBigBanner(`🃏 覺醒天賦：【${card.name}】`, card.desc, '#facc15');
+    this.updateScoreboardUI();
   }
 
   escapeHTML(rawText) {
@@ -320,8 +444,29 @@ export class GameEngine {
   }
 
   loadQuestion(idx) {
+    if (this.blitzTimer) {
+      clearInterval(this.blitzTimer);
+      this.blitzTimer = null;
+    }
+
     if (idx >= this.questions.length) {
+      renderFloatingTargetsOverlay({ active: false });
       this.showFinalCard();
+      return;
+    }
+
+    // 每過 3 局 (第 4 局 idx=3、第 7 局 idx=6) 觸發 Roguelike 三選一狂暴天賦卡！
+    if ((idx === 3 || idx === 6) && !this.draftedStages.has(idx)) {
+      this.draftedStages.add(idx);
+      renderFloatingTargetsOverlay({ active: false });
+      soundCtrl.playOrganCharge();
+      openRoguelikeDraftModal({
+        edition: 'baseball',
+        onSelectCard: (card) => {
+          this.applyRoguelikeCard(card);
+          this.loadQuestion(idx);
+        }
+      });
       return;
     }
 
@@ -332,6 +477,28 @@ export class GameEngine {
     this.isGuidedRetryPending = false;
     this.lastGuideData = null;
     const q = this.questions[idx];
+
+    // 隨機亂入突發事件 (外星飛碟雙倍賞金 / 滿壘大轉機 / 15秒快問快答)
+    this.currentEncounter = rollRandomEncounter('baseball', idx);
+    this.blitzSecondsLeft = 0;
+    if (this.currentEncounter) {
+      if (this.currentEncounter.freeRunners) {
+        this.bases[0] = true;
+        this.bases[1] = true;
+      }
+      if (this.currentEncounter.blitzSeconds > 0) {
+        this.blitzSecondsLeft = this.currentEncounter.blitzSeconds;
+        this.blitzTimer = setInterval(() => {
+          this.blitzSecondsLeft = Math.max(0, this.blitzSecondsLeft - 1);
+          this.renderActiveBuffsBar();
+          if (this.blitzSecondsLeft <= 0 && this.blitzTimer) {
+            clearInterval(this.blitzTimer);
+            this.blitzTimer = null;
+          }
+        }, 1000);
+      }
+      this.showBigBanner(this.currentEncounter.title, this.currentEncounter.desc, '#facc15');
+    }
 
     // 依局數切換魔王投手與日/昏/夜球場天色 (0~2局:暴熊, 3~5局:忍蛙, 6~8局:巨龍)
     const bossStage = Math.min(2, Math.floor(idx / 3));
@@ -368,6 +535,21 @@ export class GameEngine {
       optionsContainer.appendChild(btn);
     });
 
+    // 若擁有「🦅 鷹眼自動球探」天賦層數，上場自動免費刪去 1 個錯誤選項！
+    if (this.eagleEyeCharges > 0) {
+      this.eagleEyeCharges--;
+      const wrongIndices = q.options.map((o, i) => (!o.isCorrect ? i : -1)).filter(i => i !== -1);
+      if (wrongIndices.length > 0) {
+        const autoIdx = wrongIndices[Math.floor(Math.random() * wrongIndices.length)];
+        this.eliminatedIndices.add(autoIdx);
+        const btns = document.querySelectorAll('.batting-btn');
+        if (btns[autoIdx]) {
+          btns[autoIdx].disabled = true;
+          btns[autoIdx].classList.add('eliminated-opt');
+        }
+      }
+    }
+
     // Phase 2.2：斷尺視覺量測台 (數學第 3 單元)
     renderRulerWidget(
       document.getElementById('ruler-widget-container'),
@@ -396,8 +578,9 @@ export class GameEngine {
       () => soundCtrl.playPitchSound()
     );
 
-    // Phase 2.1：好球帶九宮格投球靶心面板
+    // Phase 2.1：好球帶九宮格投球靶心面板 & 5.0 飛天熱氣球靶心
     this.refreshStrikeZoneGrid();
+    this.refreshFloatingBalloons();
 
     this.resetPositions();
     this.updateScoreboardUI();
@@ -462,6 +645,7 @@ export class GameEngine {
     targetBtn.classList.add('eliminated-opt');
 
     this.refreshStrikeZoneGrid();
+    this.refreshFloatingBalloons();
     soundCtrl.playPitchSound();
     this.updateScoreboardUI();
   }
@@ -492,7 +676,7 @@ export class GameEngine {
 
     if (distFromCenter <= sweetSpotRadius || this.combo >= 2) {
       return 4; // HOME RUN
-    } else if (distFromCenter <= 0.28 || this.equippedBat === 'dragon') {
+    } else if (distFromCenter <= 0.28 || this.equippedBat === 'dragon' || this.equippedPet === 'minidragon') {
       return 2; // DOUBLE 二壘打
     }
     return 1; // SINGLE 一壘打
@@ -527,6 +711,11 @@ export class GameEngine {
   handleSwing(option, zoneIdx) {
     if (this.isAnimating) return;
     this.isAnimating = true;
+    if (this.blitzTimer) {
+      clearInterval(this.blitzTimer);
+      this.blitzTimer = null;
+    }
+    renderFloatingTargetsOverlay({ active: false });
 
     const buttons = document.querySelectorAll('.batting-btn, .sz-plate');
     buttons.forEach(b => b.disabled = true);
@@ -560,79 +749,107 @@ export class GameEngine {
   }
 
   executeContact(option, zoneIdx) {
-    this.field.batGroup.rotation.z = Math.PI / 2.2;
-    this.field.batGroup.rotation.y = -Math.PI / 2.2;
-
     const currentQ = this.questions[this.currentQuestionIdx];
 
     if (option.isCorrect) {
-      this.hits++;
-      this.combo++;
-      const hitBases = this.evaluateHitBases();
-      const isHR = hitBases === 4;
-      const wasBasesLoaded = this.bases[0] && this.bases[1] && this.bases[2];
-      const rbi = this.advanceRunners(hitBases);
+      // 啟動 5.0「🎯 魔球鎖定・手動揮棒 QTE」微操作！
+      const petObj = BASEBALL_PETS.find(p => p.id === this.equippedPet) || BASEBALL_PETS[0];
+      const slowMoBonus = (this.roguelikeBuffs.has('slow_motion') ? 1.0 : 0) + (petObj.qteBonus || 0);
 
-      // 計算金幣獎勵
-      let earnedCoins = isHR ? (wasBasesLoaded ? 80 : 40) : hitBases === 2 ? 25 : 15;
-      if (this.equippedBat === 'dragon') earnedCoins += 15;
-      if (this.equippedBat === 'rainbow') earnedCoins *= 2;
-      this.coins += earnedCoins;
-      this.savePlayerData();
+      runBaseballSwingQTE({
+        pitchName: this.currentPitch?.name || '🔥 152km 火焰直球',
+        sweetSpotBonus: slowMoBonus,
+        onSound: (isPerfect) => soundCtrl.playHitSound(isPerfect),
+        onComplete: (qteResult) => {
+          this.field.batGroup.rotation.z = Math.PI / 2.2;
+          this.field.batGroup.rotation.y = -Math.PI / 2.2;
 
-      if (isHR) {
-        this.homeRuns++;
-        this.field.startBatterVictoryRun(); // 打者真實繞壘奔跑動畫！
-      }
+          this.hits++;
+          this.combo++;
+          let hitBases = this.evaluateHitBases() + qteResult.bonusBases;
+          if (this.roguelikeBuffs.has('power_bat')) hitBases += 1;
+          hitBases = Math.min(4, hitBases);
 
-      this.isFeverActive = false;
-      // 唯有第一次揮棒就直接答對，才從錯題本移除，確保需要教練引導的題目仍可進錯題特訓複習
-      if (this.strikesThisTurn === 0) {
-        this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
-        this.savePlayerData();
-      }
+          const isHR = hitBases === 4;
+          const wasBasesLoaded = this.bases[0] && this.bases[1] && this.bases[2];
+          const rbi = this.advanceRunners(hitBases);
 
-      this.updateScoreboardUI();
-      soundCtrl.playHitSound(isHR);
-      this.field.spawnHitSparks(this.field.ball.position, isHR);
-      this.field.isCrowdCheering = true;
+          // 計算金幣獎勵 (基礎 + QTE手動加成 + 球棒 + 3D寵物 + 3D球場擴建設施 + 亂入事件 + 磁鐵天賦)
+          let earnedCoins = (isHR ? (wasBasesLoaded ? 80 : 40) : hitBases === 2 ? 25 : 15) + qteResult.bonusCoins;
+          if (this.equippedBat === 'dragon') earnedCoins += 15;
+          if (petObj) earnedCoins += petObj.bonusCoins;
 
-      document.body.classList.add('screen-shake');
-      setTimeout(() => document.body.classList.remove('screen-shake'), 380);
+          let buildBonus = 0;
+          BASEBALL_STADIUM_BUILDS.forEach(b => {
+            if (this.unlockedBuilds.includes(b.id)) buildBonus += b.bonusCoins;
+          });
+          earnedCoins += buildBonus;
 
-      // 計算 Statcast 飛行距離與初速
-      const distMeters = isHR ? Math.floor(125 + Math.random() * 42) : hitBases === 2 ? Math.floor(85 + Math.random() * 25) : Math.floor(45 + Math.random() * 25);
-      const exitVel = isHR ? Math.floor(162 + Math.random() * 22) : Math.floor(125 + Math.random() * 25);
-      const statcastStr = `📏 飛行距離：${distMeters} 公尺 ｜ ⚡ 擊球初速：${exitVel} km/h ｜ 💰 +${earnedCoins} 金幣`;
+          if (this.blitzSecondsLeft > 0) earnedCoins += 35;
+          if (this.currentEncounter?.coinMultiplier > 1) earnedCoins *= this.currentEncounter.coinMultiplier;
+          if (this.equippedBat === 'rainbow') earnedCoins *= 2;
+          if (this.roguelikeBuffs.has('coin_magnet')) earnedCoins *= 2;
 
-      let bannerText = '⚾ 穿越安打 SINGLE!';
-      if (isHR && wasBasesLoaded) bannerText = '👑 滿貫全壘打 GRAND SLAM! (+4分)';
-      else if (isHR && rbi > 1) bannerText = `💥 ${rbi}分全壘打 HOME RUN!`;
-      else if (isHR) bannerText = '💥 超大號全壘打 HOME RUN!';
-      else if (hitBases === 2) bannerText = `🔥 深遠二壘長打 DOUBLE!`;
+          this.coins += earnedCoins;
+          this.savePlayerData();
 
-      this.showBigBanner(bannerText, statcastStr, isHR ? '#fef08a' : '#38bdf8');
+          if (isHR) {
+            this.homeRuns++;
+            this.field.startBatterVictoryRun(); // 打者真實繞壘奔跑動畫！
+          }
 
-      if (isHR) {
-        confetti({ particleCount: 95, spread: 85, origin: { y: 0.55 } });
-      }
+          this.isFeverActive = false;
+          // 唯有第一次揮棒就直接答對，才從錯題本移除，確保需要教練引導的題目仍可進錯題特訓複習
+          if (this.strikesThisTurn === 0) {
+            this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
+            this.savePlayerData();
+          }
 
-      const wasGuidedSuccess = this.strikesThisTurn > 0;
-      this.animateHitBallFlight(zoneIdx, hitBases, () => {
-        const guidedPraise = wasGuidedSuccess
-          ? `<div class="guide-step-card guide-step-think" style="margin-top:8px;">🌟 <b>引導破解成功！</b>你順著教練的思考步驟，靠自己找出正確答案了！<br>🎓 <b>完整觀念總結</b>：${this.escapeHTML(currentQ.hint)}</div>`
-          : `<div style="margin-top:6px;color:#93c5fd;">🎓 <b>觀念解析</b>：${this.escapeHTML(currentQ.hint)}</div>`;
-        const extraMsg = `<br>📏 <b>飛行距離：${distMeters}m（初速 ${exitVel}km/h）</b><br>💰 <b>獲得賞金：+${earnedCoins} 金幣！</b>（連擊 COMBO x${this.combo}）${guidedPraise}`;
-        this.showFeedbackModal(
-          true,
-          `<b>${bannerText}</b><br>${option.hitResult}${extraMsg}`,
-          wasGuidedSuccess
-            ? `太棒了！經過教練引導，你自己找出正確答案了！${currentQ.hint}`
-            : isHR ? `全壘打！飛行距離 ${distMeters} 公尺！` : `漂亮安打！`
-        );
+          this.updateScoreboardUI();
+          this.field.spawnHitSparks(this.field.ball.position, isHR);
+          this.field.isCrowdCheering = true;
+
+          document.body.classList.add('screen-shake');
+          setTimeout(() => document.body.classList.remove('screen-shake'), 380);
+
+          // 計算 Statcast 飛行距離與初速
+          const petDist = petObj?.bonusDist || 0;
+          const distMeters = (isHR ? Math.floor(125 + Math.random() * 42) : hitBases === 2 ? Math.floor(85 + Math.random() * 25) : Math.floor(45 + Math.random() * 25)) + petDist;
+          const exitVel = isHR ? Math.floor(162 + Math.random() * 22) : Math.floor(125 + Math.random() * 25);
+          const statcastStr = `${qteResult.label} ｜ 📏 ${distMeters}m ｜ 💰 +${earnedCoins} 金幣`;
+
+          let bannerText = '⚾ 穿越安打 SINGLE!';
+          if (isHR && wasBasesLoaded) bannerText = '👑 滿貫全壘打 GRAND SLAM! (+4分)';
+          else if (isHR && rbi > 1) bannerText = `💥 ${rbi}分全壘打 HOME RUN!`;
+          else if (isHR) bannerText = '💥 超大號全壘打 HOME RUN!';
+          else if (hitBases === 2) bannerText = `🔥 深遠二壘長打 DOUBLE!`;
+
+          this.showBigBanner(bannerText, statcastStr, isHR ? '#fef08a' : '#38bdf8');
+
+          if (isHR) {
+            confetti({ particleCount: 95, spread: 85, origin: { y: 0.55 } });
+          }
+
+          const wasGuidedSuccess = this.strikesThisTurn > 0;
+          this.animateHitBallFlight(zoneIdx, hitBases, () => {
+            const guidedPraise = wasGuidedSuccess
+              ? `<div class="guide-step-card guide-step-think" style="margin-top:8px;">🌟 <b>引導破解成功！</b>你順著教練的思考步驟，靠自己找出正確答案了！<br>🎓 <b>完整觀念總結</b>：${this.escapeHTML(currentQ.hint)}</div>`
+              : `<div style="margin-top:6px;color:#93c5fd;">🎓 <b>觀念解析</b>：${this.escapeHTML(currentQ.hint)}</div>`;
+            const extraMsg = `<br>🎯 <b>揮棒時機：${qteResult.label}</b><br>📏 <b>飛行距離：${distMeters}m（初速 ${exitVel}km/h）</b><br>💰 <b>獲得賞金：+${earnedCoins} 金幣！</b>（含寵物與球場設施加成・COMBO x${this.combo}）${guidedPraise}`;
+            this.showFeedbackModal(
+              true,
+              `<b>${bannerText}</b><br>${option.hitResult}${extraMsg}`,
+              wasGuidedSuccess
+                ? `太棒了！經過教練引導，你自己找出正確答案了！${currentQ.hint}`
+                : isHR ? `全壘打！飛行距離 ${distMeters} 公尺！` : `漂亮安打！`
+            );
+          });
+        }
       });
 
     } else {
+      this.field.batGroup.rotation.z = Math.PI / 2.2;
+      this.field.batGroup.rotation.y = -Math.PI / 2.2;
       soundCtrl.playMissSound();
       this.strikesThisTurn++;
 
@@ -662,20 +879,26 @@ export class GameEngine {
         return;
       }
 
-      // 第二次仍答錯：正式三振出局，顯示完整解析並請學童確認正確答案
+      // 第二次仍答錯：檢查是否有「🛡️ 金剛免出局護盾」
       this.combo = 0;
-      this.outs++;
       this.isFeverActive = false;
       this.isGuidedRetryPending = false;
 
       let outNotice = '';
-      if (this.outs >= 3) {
-        outNotice = '<br><br>⚠️ <b>三出局攻守交換（壘上跑者清空）！</b>';
-        this.outs = 0;
-        this.bases = [false, false, false];
-        this.showBigBanner('❌ 三出局 3 OUTS!', '', '#ef4444');
+      if (this.ironShieldCharges > 0) {
+        this.ironShieldCharges--;
+        outNotice = '<br><br>🛡️ <b>發動「金剛免出局護盾」！抵銷本次三振，不計出局數！</b>';
+        this.showBigBanner('🛡️ 金剛護盾發動！免除三振！', '', '#38bdf8');
       } else {
-        this.showBigBanner('⚡ 揮棒落空 STRIKE OUT!', '', '#ef4444');
+        this.outs++;
+        if (this.outs >= 3) {
+          outNotice = '<br><br>⚠️ <b>三出局攻守交換（壘上跑者清空）！</b>';
+          this.outs = 0;
+          this.bases = [false, false, false];
+          this.showBigBanner('❌ 三出局 3 OUTS!', '', '#ef4444');
+        } else {
+          this.showBigBanner('⚡ 揮棒落空 STRIKE OUT!', '', '#ef4444');
+        }
       }
 
       this.updateScoreboardUI();
@@ -849,7 +1072,54 @@ export class GameEngine {
     });
 
     this.refreshStrikeZoneGrid();
+    this.refreshFloatingBalloons();
     this.updateScoreboardUI();
+  }
+
+  // 開啟「🥚 3D 寵物盲盒 ＆ 🎡 球場擴建」中心
+  openPetAndBuildCenter(lastWonPet = null) {
+    openPetAndBuildModal({
+      edition: 'baseball',
+      currency: this.coins,
+      unlockedPets: this.unlockedPets,
+      equippedPet: this.equippedPet,
+      unlockedBuilds: this.unlockedBuilds,
+      lastWonPet,
+      onPullGacha: (wonPet, cost) => {
+        this.coins -= cost;
+        if (!this.unlockedPets.includes(wonPet.id)) {
+          this.unlockedPets.push(wonPet.id);
+        }
+        this.equippedPet = wonPet.id;
+        this.field.setPetCompanion(wonPet.id);
+        this.savePlayerData();
+        this.updateScoreboardUI();
+        soundCtrl.playOrganCharge();
+        confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
+        this.showBigBanner(`🎉 恭喜抽中神獸：【${wonPet.name}】！`, wonPet.desc, '#facc15');
+        this.openPetAndBuildCenter(wonPet);
+      },
+      onEquipPet: (petId) => {
+        this.equippedPet = petId;
+        this.field.setPetCompanion(petId);
+        this.savePlayerData();
+        this.updateScoreboardUI();
+        soundCtrl.playPitchSound();
+        this.openPetAndBuildCenter();
+      },
+      onBuyBuild: (buildItem) => {
+        if (this.coins < buildItem.price || this.unlockedBuilds.includes(buildItem.id)) return;
+        this.coins -= buildItem.price;
+        this.unlockedBuilds.push(buildItem.id);
+        this.field.updateStadiumBuilds(this.unlockedBuilds);
+        this.savePlayerData();
+        this.updateScoreboardUI();
+        soundCtrl.playOrganCharge();
+        confetti({ particleCount: 80, spread: 90, origin: { y: 0.55 } });
+        this.showBigBanner(`🎡 球場擴建完成：【${buildItem.name}】！`, buildItem.desc, '#4ade80');
+        this.openPetAndBuildCenter();
+      }
+    });
   }
 
   showFeedbackModal(isSuccess, messageHtml, speechText, customBtnText = '') {
@@ -936,6 +1206,11 @@ export class GameEngine {
       document.getElementById('shop-modal').classList.add('hidden');
     };
 
+    const petBuildBtn = document.getElementById('btn-open-pet-build');
+    if (petBuildBtn) {
+      petBuildBtn.onclick = () => this.openPetAndBuildCenter();
+    }
+
     // 球員姓名與背號設定視窗 (Phase 3)
     const profileModal = document.getElementById('profile-modal');
     const openProfileBtn = document.getElementById('btn-open-profile');
@@ -969,6 +1244,20 @@ export class GameEngine {
       gridToggleBtn.onclick = () => {
         this.isStrikeZoneGridActive = !this.isStrikeZoneGridActive;
         this.refreshStrikeZoneGrid();
+        this.refreshFloatingBalloons();
+        this.updateScoreboardUI();
+        soundCtrl.playPitchSound();
+      };
+    }
+
+    // 飛天熱氣球動態靶心切換按鈕 (Phase 5.0)
+    const balloonToggleBtn = document.getElementById('btn-toggle-balloon');
+    if (balloonToggleBtn) {
+      balloonToggleBtn.onclick = () => {
+        const order = ['auto', 'on', 'off'];
+        const nextIdx = (order.indexOf(this.balloonModeState) + 1) % order.length;
+        this.balloonModeState = order[nextIdx];
+        this.refreshFloatingBalloons();
         this.updateScoreboardUI();
         soundCtrl.playPitchSound();
       };

@@ -31,6 +31,8 @@ export class MinecraftWorld {
     this.createBossGroup();
     this.createMysteryOreBlocks();
     this.createEnergyProjectile();
+    this.createPetCompanionGroup();
+    this.createBaseUpgradeStructures();
   }
 
   // 產生 16x16 經典像素風貼圖 (NearestFilter 保持銳利馬賽克方塊感)
@@ -467,6 +469,197 @@ export class MinecraftWorld {
     this.scene.add(this.projectile);
   }
 
+  // 建立勇者身旁的 3D 體素寵物夥伴 (小狐狸 / 村莊鐵魔像 / 鑽石戰狼 / 迷你終界龍)
+  createPetCompanionGroup() {
+    this.petRoot = new THREE.Group();
+    this.petRoot.position.set(-2.5, 0, 21.0);
+    this.petRoot.rotation.y = Math.PI / 8;
+    this.scene.add(this.petRoot);
+    this.petModels = {};
+
+    // 1. 🦊 像素紅石小狐狸 (fox)
+    const fox = new THREE.Group();
+    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.6 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.5 });
+    const fBody = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.7, 1.25), orangeMat);
+    fBody.position.y = 0.55;
+    const fHead = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.75, 0.8), orangeMat);
+    fHead.position.set(0, 0.95, 0.55);
+    const fSnout = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.32, 0.45), whiteMat);
+    fSnout.position.set(0, 0.8, 0.98);
+    const fEarL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.32, 0.16), orangeMat);
+    fEarL.position.set(-0.28, 1.42, 0.52);
+    const fEarR = fEarL.clone();
+    fEarR.position.x = 0.28;
+    const fTail = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.85), whiteMat);
+    fTail.position.set(0, 0.65, -0.85);
+    fox.add(fBody, fHead, fSnout, fEarL, fEarR, fTail);
+    fox.visible = false;
+    this.petRoot.add(fox);
+    this.petModels.fox = fox;
+
+    // 2. 🤖 村莊鐵魔像保鑣 (iron_golem)
+    const golem = new THREE.Group();
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4, metalness: 0.3 });
+    const vineMat = new THREE.MeshBasicMaterial({ color: 0x16a34a });
+    const roseMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const gChest = new THREE.Mesh(new THREE.BoxGeometry(1.55, 1.35, 0.85), ironMat);
+    gChest.position.y = 1.65;
+    const gWaist = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.65), ironMat);
+    gWaist.position.y = 0.65;
+    const gHead = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.05, 0.85), ironMat);
+    gHead.position.y = 2.85;
+    const gArmL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.95, 0.45), ironMat);
+    gArmL.position.set(-1.05, 1.45, 0);
+    const gArmR = gArmL.clone();
+    gArmR.position.x = 1.05;
+    const poppy = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.38, 0.28), roseMat);
+    poppy.position.set(-0.6, 2.48, 0.25);
+    const vine = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.9), vineMat);
+    vine.position.set(0.4, 1.65, 0);
+    golem.add(gChest, gWaist, gHead, gArmL, gArmR, poppy, vine);
+    golem.visible = false;
+    this.petRoot.add(golem);
+    this.petModels.iron_golem = golem;
+
+    // 3. 🐺 馴服鑽石戰狼 (wolf)
+    const wolf = new THREE.Group();
+    const wolfMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.4 });
+    const collarMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const wBody = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.78, 1.3), wolfMat);
+    wBody.position.y = 0.65;
+    const wHead = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.78, 0.8), wolfMat);
+    wHead.position.set(0, 1.15, 0.58);
+    const wCollar = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.22, 0.86), collarMat);
+    wCollar.position.set(0, 0.9, 0.45);
+    const wTail = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.75), wolfMat);
+    wTail.position.set(0, 0.85, -0.82);
+    wolf.add(wBody, wHead, wCollar, wTail);
+    wolf.visible = false;
+    this.petRoot.add(wolf);
+    this.petModels.wolf = wolf;
+
+    // 4. 👾 迷你終界小黑龍 (ender_pet)
+    const enderPet = new THREE.Group();
+    const endMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, emissive: 0x7e22ce, emissiveIntensity: 0.5 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xf472b6 });
+    const eBody = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.75, 1.35), endMat);
+    eBody.position.y = 1.45;
+    const eHead = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.68, 0.85), endMat);
+    eHead.position.set(0, 1.85, 0.65);
+    const wingL = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.12, 0.85), eyeMat);
+    wingL.position.set(-1.05, 1.75, 0);
+    const wingR = wingL.clone();
+    wingR.position.x = 1.05;
+    enderPet.add(eBody, eHead, wingL, wingR);
+    enderPet.userData = { wingL, wingR };
+    enderPet.visible = false;
+    this.petRoot.add(enderPet);
+    this.petModels.ender_pet = enderPet;
+  }
+
+  setPetCompanion(petId) {
+    if (!this.petModels) return;
+    Object.keys(this.petModels).forEach(k => {
+      this.petModels[k].visible = (k === petId);
+    });
+  }
+
+  // 建立 3D 麥塊家園基地建築 (紅石箭塔 / 鑽石信標金字塔 / 溫馨橡木小屋 / 黃金苦力怕圖騰)
+  createBaseUpgradeStructures() {
+    this.baseBuildings = {};
+
+    // 1. 🏰 紅石警戒箭塔 (arrow_tower)
+    const tower = new THREE.Group();
+    const stoneMat = new THREE.MeshStandardMaterial({ map: this.textures.bedrock, roughness: 0.7 });
+    const redstoneMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    for (let y = 0; y < 4; y++) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 2.6), stoneMat);
+      b.position.y = y * 2.2 + 1.1;
+      tower.add(b);
+    }
+    const topCrown = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.1, 3.4), stoneMat);
+    topCrown.position.y = 9.2;
+    const rsCore = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), redstoneMat);
+    rsCore.position.y = 10.6;
+    tower.add(topCrown, rsCore);
+    tower.position.set(-10.5, 0, 17.5);
+    tower.userData = { rsCore };
+    tower.visible = false;
+    this.scene.add(tower);
+    this.baseBuildings.arrow_tower = tower;
+
+    // 2. 💎 鑽石信標金字塔 (diamond_beacon)
+    const beacon = new THREE.Group();
+    const diaMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.55, metalness: 0.5 });
+    const tier1 = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 4.2), diaMat);
+    tier1.position.y = 0.55;
+    const tier2 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.1, 2.8), diaMat);
+    tier2.position.y = 1.65;
+    const glass = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 1.5, 1.5),
+      new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.85 })
+    );
+    glass.position.y = 2.85;
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.55, 55, 12),
+      new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.45 })
+    );
+    beam.position.y = 28;
+    beacon.add(tier1, tier2, glass, beam);
+    beacon.position.set(10.5, 0, 17.5);
+    beacon.userData = { beam };
+    beacon.visible = false;
+    this.scene.add(beacon);
+    this.baseBuildings.diamond_beacon = beacon;
+
+    // 3. 🏠 溫馨橡木小木屋 (oak_house)
+    const house = new THREE.Group();
+    const woodMat = new THREE.MeshStandardMaterial({ map: this.textures.wood });
+    const roofMat = new THREE.MeshStandardMaterial({ map: this.textures.dirt });
+    const windowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(4.4, 3.4, 4.0), woodMat);
+    walls.position.y = 1.7;
+    const roof1 = new THREE.Mesh(new THREE.BoxGeometry(5.0, 1.2, 4.6), roofMat);
+    roof1.position.y = 3.9;
+    const roof2 = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.1, 3.4), roofMat);
+    roof2.position.y = 4.9;
+    const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.15), windowMat);
+    win.position.set(0, 2.0, 2.02);
+    house.add(walls, roof1, roof2, win);
+    house.position.set(-12.5, 0, 7.5);
+    house.rotation.y = 0.35;
+    house.visible = false;
+    this.scene.add(house);
+    this.baseBuildings.oak_house = house;
+
+    // 4. 🗿 黃金苦力怕圖騰柱 (gold_totem)
+    const totem = new THREE.Group();
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.45, metalness: 0.7 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
+    const tBase = new THREE.Mesh(new THREE.BoxGeometry(2.8, 4.5, 2.8), goldMat);
+    tBase.position.y = 2.25;
+    const tHead = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.2, 3.2), goldMat);
+    tHead.position.y = 6.1;
+    const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.15), eyeMat);
+    eyeL.position.set(-0.7, 6.5, 1.62);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.7;
+    totem.add(tBase, tHead, eyeL, eyeR);
+    totem.position.set(12.5, 0, 7.5);
+    totem.rotation.y = -0.35;
+    totem.visible = false;
+    this.scene.add(totem);
+    this.baseBuildings.gold_totem = totem;
+  }
+
+  updateBaseBuildings(unlockedBuilds = []) {
+    if (!this.baseBuildings) return;
+    Object.keys(this.baseBuildings).forEach(id => {
+      this.baseBuildings[id].visible = unlockedBuilds.includes(id);
+    });
+  }
+
   // 礦石擊碎像素粒子與經驗球噴發特效
   spawnOreShatterParticles(pos, isSuccess = true) {
     const count = isSuccess ? 26 : 12;
@@ -547,6 +740,31 @@ export class MinecraftWorld {
         p.geometry.dispose();
         p.material.dispose();
         this.debrisParticles.splice(i, 1);
+      }
+    }
+
+    // 3D 隨身像素寵物跳動與拍翅動畫
+    if (this.petRoot) {
+      this.petRoot.position.y = Math.abs(Math.sin(time * 6)) * 0.26;
+      this.petRoot.rotation.y = Math.PI / 8 + Math.sin(time * 3) * 0.14;
+      const ep = this.petModels?.ender_pet;
+      if (ep && ep.visible && ep.userData.wingL) {
+        ep.userData.wingL.rotation.z = Math.sin(time * 10) * 0.45;
+        ep.userData.wingR.rotation.z = -Math.sin(time * 10) * 0.45;
+      }
+    }
+
+    // 3D 家園建築特效 (紅石箭塔核心旋轉、信標光束脈動)
+    if (this.baseBuildings) {
+      const at = this.baseBuildings.arrow_tower;
+      if (at && at.visible && at.userData.rsCore) {
+        at.userData.rsCore.rotation.y = time * 2.5;
+        at.userData.rsCore.rotation.x = time * 1.8;
+      }
+      const db = this.baseBuildings.diamond_beacon;
+      if (db && db.visible && db.userData.beam) {
+        db.userData.beam.scale.x = 1 + Math.sin(time * 8) * 0.22;
+        db.userData.beam.scale.z = 1 + Math.sin(time * 8) * 0.22;
       }
     }
   }

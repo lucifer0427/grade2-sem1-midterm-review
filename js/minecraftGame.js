@@ -17,6 +17,15 @@ import {
   renderCraftingTableGrid,
   generateAndDownloadMinecraftCard
 } from './minecraftSpecialModes.js';
+import {
+  MC_PETS,
+  MC_BASE_BUILDS,
+  rollRandomEncounter,
+  runMinecraftMiningRush,
+  openRoguelikeDraftModal,
+  renderFloatingTargetsOverlay,
+  openPetAndBuildModal
+} from './gameplayUpgrades.js';
 
 const MC_BOSS_STAGES = [
   { name: '🧟 綠茵平原：巨型苦力怕隊長', stageIdx: 0 },
@@ -60,8 +69,9 @@ export class MinecraftGameEngine {
     this.seenQuestionIds = new Set();
     this.currentQuestionIdx = 0;
     this.isCraftingGridActive = false;
+    this.floatingOreModeState = 'auto'; // 'auto': 每兩題穿插, 'on': 全開, 'off': 關閉
 
-    // 載入麥塊版獨立存檔 (初次遊玩贈送 40 顆綠寶石 🟢)
+    // 載入麥塊版獨立存檔 (初次遊玩贈送 60 顆綠寶石 🟢 與初始小狐狸寵物)
     this.loadPlayerSave();
 
     this.totalDamage = 0;
@@ -75,6 +85,16 @@ export class MinecraftGameEngine {
     this.eliminatedIndices = new Set();
     this.isGuidedRetryPending = false;
     this.lastGuideData = null;
+
+    // 5.0 Roguelike 附魔卷軸與隨機突發事件狀態
+    this.roguelikeBuffs = new Set();
+    this.activeBuffLabels = [];
+    this.enderEyeCharges = 0;
+    this.absorptionShieldCharges = 0;
+    this.draftedStages = new Set();
+    this.currentEncounter = null;
+    this.blitzSecondsLeft = 0;
+    this.blitzTimer = null;
 
     this.isAnimating = false;
     this.clock = new THREE.Clock();
@@ -93,6 +113,8 @@ export class MinecraftGameEngine {
     this.world = new MinecraftWorld(this.scene);
     this.world.equipWeaponSkin(this.equippedWeapon);
     this.world.updateHeroCapeNumber(this.heroId);
+    this.world.setPetCompanion(this.equippedPet);
+    this.world.updateBaseBuildings(this.unlockedBuilds);
     this.setupEvents();
     this.startNewGame('all');
     this.animate();
@@ -101,10 +123,16 @@ export class MinecraftGameEngine {
   loadPlayerSave() {
     try {
       const savedEmeralds = localStorage.getItem('g2_mc_emeralds');
-      this.emeralds = savedEmeralds !== null ? parseInt(savedEmeralds, 10) : 40;
+      this.emeralds = savedEmeralds !== null ? parseInt(savedEmeralds, 10) : 60;
       const savedWeapons = localStorage.getItem('g2_mc_weapons');
       this.unlockedWeapons = savedWeapons ? JSON.parse(savedWeapons) : ['wood_pick'];
       this.equippedWeapon = localStorage.getItem('g2_mc_equipped') || 'wood_pick';
+
+      const savedPets = localStorage.getItem('g2_mc_pets');
+      this.unlockedPets = savedPets ? JSON.parse(savedPets) : ['fox'];
+      this.equippedPet = localStorage.getItem('g2_mc_pet_equipped') || 'fox';
+      const savedBuilds = localStorage.getItem('g2_mc_builds');
+      this.unlockedBuilds = savedBuilds ? JSON.parse(savedBuilds) : [];
 
       this.playerName = localStorage.getItem('g2_mc_player_name') || '鑽石小勇者';
       this.heroId = localStorage.getItem('g2_mc_hero_id') || '99';
@@ -120,9 +148,12 @@ export class MinecraftGameEngine {
         this.seenQuestionIds = new Set(JSON.parse(savedSeenIds));
       }
     } catch {
-      this.emeralds = 40;
+      this.emeralds = 60;
       this.unlockedWeapons = ['wood_pick'];
       this.equippedWeapon = 'wood_pick';
+      this.unlockedPets = ['fox'];
+      this.equippedPet = 'fox';
+      this.unlockedBuilds = [];
       this.playerName = '鑽石小勇者';
       this.heroId = '99';
     }
@@ -133,6 +164,9 @@ export class MinecraftGameEngine {
       localStorage.setItem('g2_mc_emeralds', String(this.emeralds));
       localStorage.setItem('g2_mc_weapons', JSON.stringify(this.unlockedWeapons));
       localStorage.setItem('g2_mc_equipped', this.equippedWeapon);
+      localStorage.setItem('g2_mc_pets', JSON.stringify(this.unlockedPets));
+      localStorage.setItem('g2_mc_pet_equipped', this.equippedPet);
+      localStorage.setItem('g2_mc_builds', JSON.stringify(this.unlockedBuilds));
       localStorage.setItem('g2_mc_player_name', this.playerName);
       localStorage.setItem('g2_mc_hero_id', String(this.heroId));
       localStorage.setItem('g2_mc_wrong_ids', JSON.stringify(this.wrongQuestions.map(q => q.id)));
@@ -171,6 +205,7 @@ export class MinecraftGameEngine {
     if (this.animTimer) { clearInterval(this.animTimer); this.animTimer = null; }
     if (this.feedbackTimer) { clearTimeout(this.feedbackTimer); this.feedbackTimer = null; }
     if (this.bannerTimer) { clearTimeout(this.bannerTimer); this.bannerTimer = null; }
+    if (this.blitzTimer) { clearInterval(this.blitzTimer); this.blitzTimer = null; }
   }
 
   startNewGame(mode = 'all') {
@@ -179,6 +214,13 @@ export class MinecraftGameEngine {
     this.isTntActive = false;
     this.usedPotionThisTurn = false;
     this.currentMode = mode;
+
+    this.roguelikeBuffs = new Set();
+    this.activeBuffLabels = [];
+    this.enderEyeCharges = 0;
+    this.absorptionShieldCharges = 0;
+    this.draftedStages = new Set();
+    this.currentEncounter = null;
 
     const modeSelect = document.getElementById('select-mode');
     if (modeSelect) modeSelect.value = mode;
@@ -222,7 +264,8 @@ export class MinecraftGameEngine {
     }
 
     const toolObj = ANVIL_SHOP_ITEMS.find(w => w.id === this.equippedWeapon) || ANVIL_SHOP_ITEMS[0];
-    document.getElementById('hud-tool-name').textContent = `手持：${toolObj.name}`;
+    const petObj = MC_PETS.find(p => p.id === this.equippedPet) || MC_PETS[0];
+    document.getElementById('hud-tool-name').textContent = `手持：${toolObj.name} ｜ 寵物：${petObj.icon}`;
 
     const wrongBtn = document.getElementById('btn-wrong-mode');
     if (this.wrongQuestions.length > 0) {
@@ -235,6 +278,7 @@ export class MinecraftGameEngine {
     const btnPotion = document.getElementById('btn-skill-potion');
     const btnTnt = document.getElementById('btn-skill-tnt');
     const btnCraft = document.getElementById('btn-toggle-craft');
+    const btnFloat = document.getElementById('btn-toggle-floating');
 
     if (btnPotion) btnPotion.disabled = this.emeralds < 20 || this.usedPotionThisTurn || this.isAnimating;
     if (btnTnt) {
@@ -245,6 +289,80 @@ export class MinecraftGameEngine {
       btnCraft.classList.toggle('active-craft', this.isCraftingGridActive);
       btnCraft.textContent = this.isCraftingGridActive ? '🛠️ 3×3 合成台：開啟中' : '🛠️ 3×3 合成台：關閉';
     }
+    if (btnFloat) {
+      const labelMap = {
+        auto: '👾 飛天方塊：自動穿插',
+        on: '👾 飛天方塊：全開中',
+        off: '👾 飛天方塊：關閉'
+      };
+      btnFloat.textContent = labelMap[this.floatingOreModeState] || labelMap.auto;
+      btnFloat.classList.toggle('active-craft', this.floatingOreModeState !== 'off');
+    }
+
+    this.renderActiveBuffsBar();
+  }
+
+  renderActiveBuffsBar() {
+    const bar = document.getElementById('active-buffs-bar');
+    if (!bar) return;
+    const tags = [];
+    const petObj = MC_PETS.find(p => p.id === this.equippedPet);
+    if (petObj) {
+      tags.push(`<span class="buff-pill buff-pet">${petObj.name} (+${petObj.bonusDmg}⚔️/+${petObj.bonusEmeralds}🟢)</span>`);
+    }
+    if (this.unlockedBuilds.length > 0) {
+      tags.push(`<span class="buff-pill buff-build">🏰 家園建築 x${this.unlockedBuilds.length}</span>`);
+    }
+    this.activeBuffLabels.forEach(lbl => {
+      tags.push(`<span class="buff-pill buff-rogue">${this.escapeHTML(lbl)}</span>`);
+    });
+    if (this.absorptionShieldCharges > 0) {
+      tags.push(`<span class="buff-pill buff-shield">🍎 金蘋果護盾 x${this.absorptionShieldCharges}</span>`);
+    }
+    if (this.enderEyeCharges > 0) {
+      tags.push(`<span class="buff-pill buff-rogue">👁️ 真視之眼 x${this.enderEyeCharges}</span>`);
+    }
+    if (this.currentEncounter) {
+      const blitzStr = this.blitzSecondsLeft > 0 ? ` (${this.blitzSecondsLeft}s)` : '';
+      tags.push(`<span class="buff-pill buff-event">${this.escapeHTML(this.currentEncounter.title)}${blitzStr}</span>`);
+    }
+    bar.innerHTML = tags.join('');
+  }
+
+  isFloatingModeActiveForCurrentTurn() {
+    if (this.isCraftingGridActive) return false;
+    if (this.floatingOreModeState === 'on') return true;
+    if (this.floatingOreModeState === 'off') return false;
+    return this.currentQuestionIdx % 2 === 1;
+  }
+
+  refreshFloatingOres() {
+    const q = this.questions[this.currentQuestionIdx];
+    renderFloatingTargetsOverlay({
+      active: this.isFloatingModeActiveForCurrentTurn(),
+      edition: 'minecraft',
+      question: q,
+      eliminatedIndices: this.eliminatedIndices,
+      onSelectOption: (opt, optIdx) => this.handleMineBlock(opt, optIdx)
+    });
+  }
+
+  applyRoguelikeCard(card) {
+    this.roguelikeBuffs.add(card.id);
+    this.activeBuffLabels.push(`${card.icon} ${card.name}`);
+
+    if (card.id === 'ender_eye') {
+      this.enderEyeCharges += 2;
+    } else if (card.id === 'golden_apple') {
+      this.hearts = 3;
+      this.absorptionShieldCharges += 1;
+      this.emeralds += 35;
+      this.savePlayerData();
+    }
+
+    mcSound.playAnvilLevelUp();
+    this.showBigBanner(`📜 附魔覺醒：【${card.name}】`, card.desc, '#4ade80');
+    this.updateStatusBarUI();
   }
 
   escapeHTML(rawText) {
@@ -306,8 +424,29 @@ export class MinecraftGameEngine {
   }
 
   loadQuestion(idx) {
+    if (this.blitzTimer) {
+      clearInterval(this.blitzTimer);
+      this.blitzTimer = null;
+    }
+
     if (idx >= this.questions.length) {
+      renderFloatingTargetsOverlay({ active: false });
       this.showFinalCard();
+      return;
+    }
+
+    // 每過 3 關 (第 4 關 idx=3、第 7 關 idx=6) 觸發 Roguelike 三選一傳奇附魔卷軸！
+    if ((idx === 3 || idx === 6) && !this.draftedStages.has(idx)) {
+      this.draftedStages.add(idx);
+      renderFloatingTargetsOverlay({ active: false });
+      mcSound.playAnvilLevelUp();
+      openRoguelikeDraftModal({
+        edition: 'minecraft',
+        onSelectCard: (card) => {
+          this.applyRoguelikeCard(card);
+          this.loadQuestion(idx);
+        }
+      });
       return;
     }
 
@@ -318,6 +457,24 @@ export class MinecraftGameEngine {
     this.isGuidedRetryPending = false;
     this.lastGuideData = null;
     const q = this.questions[idx];
+
+    // 隨機亂入突發事件 (流浪商人雙倍綠寶石 / 遠古富集鑽石礦 / 15秒閃電破陣)
+    this.currentEncounter = rollRandomEncounter('minecraft', idx);
+    this.blitzSecondsLeft = 0;
+    if (this.currentEncounter) {
+      if (this.currentEncounter.blitzSeconds > 0) {
+        this.blitzSecondsLeft = this.currentEncounter.blitzSeconds;
+        this.blitzTimer = setInterval(() => {
+          this.blitzSecondsLeft = Math.max(0, this.blitzSecondsLeft - 1);
+          this.renderActiveBuffsBar();
+          if (this.blitzSecondsLeft <= 0 && this.blitzTimer) {
+            clearInterval(this.blitzTimer);
+            this.blitzTimer = null;
+          }
+        }, 1000);
+      }
+      this.showBigBanner(this.currentEncounter.title, this.currentEncounter.desc, '#facc15');
+    }
 
     const bossStage = Math.min(2, Math.floor(idx / 3));
     const bossInfo = MC_BOSS_STAGES[bossStage];
@@ -347,6 +504,21 @@ export class MinecraftGameEngine {
       optionsContainer.appendChild(btn);
     });
 
+    // 若擁有「👁️ 終界真視之眼」附魔層數，進場自動免費石化 1 座假礦脈！
+    if (this.enderEyeCharges > 0) {
+      this.enderEyeCharges--;
+      const wrongIndices = q.options.map((o, i) => (!o.isCorrect ? i : -1)).filter(i => i !== -1);
+      if (wrongIndices.length > 0) {
+        const autoIdx = wrongIndices[Math.floor(Math.random() * wrongIndices.length)];
+        this.eliminatedIndices.add(autoIdx);
+        const btns = document.querySelectorAll('.ore-btn');
+        if (btns[autoIdx]) {
+          btns[autoIdx].disabled = true;
+          btns[autoIdx].classList.add('eliminated-opt');
+        }
+      }
+    }
+
     // 數學第 3 單元：紅石活塞方塊尺
     renderRedstoneRulerWidget(
       document.getElementById('ruler-widget-container'),
@@ -375,6 +547,7 @@ export class MinecraftGameEngine {
     );
 
     this.refreshCraftingGrid();
+    this.refreshFloatingOres();
     this.resetHeroAndOres();
     this.updateStatusBarUI();
     mcSound.speakText(this.getSpokenQuestionText(q));
@@ -434,6 +607,7 @@ export class MinecraftGameEngine {
 
     this.world.updateOreBlockStates(this.eliminatedIndices);
     this.refreshCraftingGrid();
+    this.refreshFloatingOres();
     mcSound.playDigSound();
     this.updateStatusBarUI();
   }
@@ -467,6 +641,11 @@ export class MinecraftGameEngine {
   handleMineBlock(option, zoneIdx) {
     if (this.isAnimating) return;
     this.isAnimating = true;
+    if (this.blitzTimer) {
+      clearInterval(this.blitzTimer);
+      this.blitzTimer = null;
+    }
+    renderFloatingTargetsOverlay({ active: false });
 
     const buttons = document.querySelectorAll('.ore-btn, .mc-craft-slot');
     buttons.forEach(b => (b.disabled = true));
@@ -496,60 +675,100 @@ export class MinecraftGameEngine {
     const targetOre = this.world.oreBlocks[zoneIdx];
 
     if (option.isCorrect) {
-      this.hits++;
-      this.combo++;
-      const tier = this.evaluateMiningTier();
-      const isCrit = tier === 3;
-      if (isCrit) this.critCount++;
-
-      const dmgDealt = tier === 3 ? 250 + this.combo * 20 : tier === 2 ? 150 : 100;
-      this.totalDamage += dmgDealt;
-
-      let earnedEmeralds = tier === 3 ? 40 : tier === 2 ? 25 : 15;
-      if (this.equippedWeapon === 'diamond_pick') earnedEmeralds += 15;
-      if (this.equippedWeapon === 'netherite_trident') earnedEmeralds *= 2;
-      this.emeralds += earnedEmeralds;
-
-      this.isTntActive = false;
-      if (this.mistakesThisTurn === 0) {
-        this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
-      }
-      this.savePlayerData();
-      this.updateStatusBarUI();
-
-      // 礦石爆裂特效與經驗球叮咚聲
+      // 礦石先碎裂，接著進入 5.0「⚡ 3秒狂暴連擊・挖礦砍怪 Rush」微操作！
       targetOre.visible = false;
       this.world.spawnOreShatterParticles(targetOre.position, true);
-      mcSound.playMineSuccessSound(isCrit);
+      mcSound.playMineSuccessSound(false);
 
-      document.body.classList.add('screen-shake');
-      setTimeout(() => document.body.classList.remove('screen-shake'), 380);
+      const petObj = MC_PETS.find(p => p.id === this.equippedPet) || MC_PETS[0];
+      runMinecraftMiningRush({
+        hasHaste: this.roguelikeBuffs.has('haste_ii'),
+        petClickBonus: petObj?.clickDmg || 0,
+        onHitSound: (isMega) => {
+          this.world.armPivot.rotation.x = -Math.random() * 1.4;
+          this.world.spawnOreShatterParticles(targetOre.position, true);
+          mcSound.playMineSuccessSound(isMega);
+        },
+        onComplete: (rushResult) => {
+          this.hits++;
+          this.combo++;
+          const tier = rushResult.isMegaTnt ? 3 : this.evaluateMiningTier();
+          const isCrit = tier === 3;
+          if (isCrit) this.critCount++;
 
-      let bannerTitle = '⛏️ 精準挖掘成功！';
-      if (tier === 3) bannerTitle = '🧨 紅石 TNT 超載大爆擊！';
-      else if (tier === 2) bannerTitle = '⚔️ 附魔重擊破防！';
+          let buildBonusDmg = 0;
+          let buildBonusEmeralds = 0;
+          MC_BASE_BUILDS.forEach(b => {
+            if (this.unlockedBuilds.includes(b.id)) {
+              buildBonusDmg += b.bonusDmg;
+              buildBonusEmeralds += b.bonusEmeralds;
+            }
+          });
 
-      const statStr = `⚔️ 造成傷害：${dmgDealt} 點 ｜ 🟢 +${earnedEmeralds} 綠寶石`;
-      this.showBigBanner(bannerTitle, statStr, isCrit ? '#fef08a' : '#4ade80');
+          let dmgDealt =
+            (tier === 3 ? 250 + this.combo * 20 : tier === 2 ? 150 : 100) +
+            rushResult.bonusDmg +
+            (petObj?.bonusDmg || 0) +
+            buildBonusDmg;
 
-      if (isCrit) {
-        confetti({ particleCount: 90, spread: 85, origin: { y: 0.55 } });
-      }
+          if (this.roguelikeBuffs.has('tnt_chain')) dmgDealt += 180;
+          if (this.currentEncounter?.bonusDmg > 0) dmgDealt += this.currentEncounter.bonusDmg;
+          if (this.roguelikeBuffs.has('sharpness_v')) dmgDealt = Math.round(dmgDealt * 1.8);
 
-      const wasGuidedSuccess = this.mistakesThisTurn > 0;
-      this.animateBossBeamAttack(targetOre.position, () => {
-        const guidedPraise = wasGuidedSuccess
-          ? `<div class="guide-step-card guide-step-think" style="margin-top:8px;">🌟 <b>合成卷軸破解成功！</b>你順著村莊圖書管理員的提示，靠自己挖出真鑽石了！<br>🎓 <b>完整觀念總結</b>：${this.escapeHTML(currentQ.hint)}</div>`
-          : `<div style="margin-top:6px;color:#86efac;">🎓 <b>觀念解析</b>：${this.escapeHTML(currentQ.hint)}</div>`;
-        const extraMsg = `<br>⚔️ <b>對魔王造成：${dmgDealt} 點傷害！</b><br>🟢 <b>獲得戰利品：+${earnedEmeralds} 綠寶石！</b>（連擊 COMBO x${this.combo}）${guidedPraise}`;
+          this.totalDamage += dmgDealt;
 
-        this.showFeedbackModal(
-          true,
-          `<b>${bannerTitle}</b><br>${this.escapeHTML(this.formatMcHitResult(option.hitResult, true))}${extraMsg}`,
-          wasGuidedSuccess
-            ? `太棒了！經過圖書管理員引導，你成功挖出正確答案了！${currentQ.hint}`
-            : `挖掘成功！對魔王造成 ${dmgDealt} 點傷害！`
-        );
+          let earnedEmeralds =
+            (tier === 3 ? 40 : tier === 2 ? 25 : 15) +
+            rushResult.bonusEmeralds +
+            (petObj?.bonusEmeralds || 0) +
+            buildBonusEmeralds;
+
+          if (this.equippedWeapon === 'diamond_pick') earnedEmeralds += 15;
+          if (this.blitzSecondsLeft > 0) earnedEmeralds += 35;
+          if (this.currentEncounter?.emeraldMultiplier > 1) earnedEmeralds *= this.currentEncounter.emeraldMultiplier;
+          if (this.equippedWeapon === 'netherite_trident') earnedEmeralds *= 2;
+          if (this.roguelikeBuffs.has('fortune_iii')) earnedEmeralds *= 2;
+
+          this.emeralds += earnedEmeralds;
+
+          this.isTntActive = false;
+          if (this.mistakesThisTurn === 0) {
+            this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
+          }
+          this.savePlayerData();
+          this.updateStatusBarUI();
+
+          document.body.classList.add('screen-shake');
+          setTimeout(() => document.body.classList.remove('screen-shake'), 380);
+
+          let bannerTitle = '⛏️ 精準挖掘成功！';
+          if (rushResult.isMegaTnt) bannerTitle = '🧨 終極紅石大核爆 MEGA TNT！';
+          else if (tier === 3) bannerTitle = '🧨 紅石 TNT 超載大爆擊！';
+          else if (tier === 2) bannerTitle = '⚔️ 附魔重擊破防！';
+
+          const statStr = `${rushResult.label} ｜ ⚔️ 總傷害：${dmgDealt} ｜ 🟢 +${earnedEmeralds}`;
+          this.showBigBanner(bannerTitle, statStr, isCrit ? '#fef08a' : '#4ade80');
+
+          if (isCrit) {
+            confetti({ particleCount: 90, spread: 85, origin: { y: 0.55 } });
+          }
+
+          const wasGuidedSuccess = this.mistakesThisTurn > 0;
+          this.animateBossBeamAttack(targetOre.position, () => {
+            const guidedPraise = wasGuidedSuccess
+              ? `<div class="guide-step-card guide-step-think" style="margin-top:8px;">🌟 <b>合成卷軸破解成功！</b>你順著村莊圖書管理員的提示，靠自己挖出真鑽石了！<br>🎓 <b>完整觀念總結</b>：${this.escapeHTML(currentQ.hint)}</div>`
+              : `<div style="margin-top:6px;color:#86efac;">🎓 <b>觀念解析</b>：${this.escapeHTML(currentQ.hint)}</div>`;
+            const extraMsg = `<br>⚡ <b>連擊戰果：${rushResult.label}</b><br>⚔️ <b>對魔王造成：${dmgDealt} 點總傷害！</b><br>🟢 <b>獲得戰利品：+${earnedEmeralds} 綠寶石！</b>（含寵物與家園建築加成・COMBO x${this.combo}）${guidedPraise}`;
+
+            this.showFeedbackModal(
+              true,
+              `<b>${bannerTitle}</b><br>${this.escapeHTML(this.formatMcHitResult(option.hitResult, true))}${extraMsg}`,
+              wasGuidedSuccess
+                ? `太棒了！經過圖書管理員引導，你成功挖出正確答案了！${currentQ.hint}`
+                : `挖掘成功！對魔王造成 ${dmgDealt} 點傷害！`
+            );
+          });
+        }
       });
     } else {
       // 答錯處理
@@ -582,21 +801,27 @@ export class MinecraftGameEngine {
         return;
       }
 
-      // 第二次仍敲錯：苦力怕爆炸扣除 1 顆愛心，顯示完整解析
+      // 第二次仍敲錯：檢查是否有「🍎 附魔金蘋果護盾」
       mcSound.playExplosionSound();
       this.world.spawnOreShatterParticles(targetOre.position, false);
       this.combo = 0;
-      this.hearts--;
       this.isTntActive = false;
       this.isGuidedRetryPending = false;
 
       let totemNotice = '';
-      if (this.hearts <= 0) {
-        totemNotice = '<br><br>🔱 <b>觸發「不死圖騰 (Totem of Undying)」！愛心全滿復活繼續挑戰！</b>';
-        this.hearts = 3;
-        this.showBigBanner('💥 苦力怕引爆！不死圖騰發動！', '', '#ef4444');
+      if (this.absorptionShieldCharges > 0) {
+        this.absorptionShieldCharges--;
+        totemNotice = '<br><br>🍎 <b>發動「附魔金蘋果護盾」！完全吸收苦力怕爆炸，不扣愛心！</b>';
+        this.showBigBanner('🍎 金蘋果護盾發動！免扣愛心！', '', '#facc15');
       } else {
-        this.showBigBanner('💥 誤觸陷阱方塊！扣除 1 顆愛心 ❤️', '', '#ef4444');
+        this.hearts--;
+        if (this.hearts <= 0) {
+          totemNotice = '<br><br>🔱 <b>觸發「不死圖騰 (Totem of Undying)」！愛心全滿復活繼續挑戰！</b>';
+          this.hearts = 3;
+          this.showBigBanner('💥 苦力怕引爆！不死圖騰發動！', '', '#ef4444');
+        } else {
+          this.showBigBanner('💥 誤觸陷阱方塊！扣除 1 顆愛心 ❤️', '', '#ef4444');
+        }
       }
 
       this.updateStatusBarUI();
@@ -758,7 +983,54 @@ export class MinecraftGameEngine {
     });
 
     this.refreshCraftingGrid();
+    this.refreshFloatingOres();
     this.updateStatusBarUI();
+  }
+
+  // 開啟「🥚 3D 生物刷怪蛋 ＆ 🏰 麥塊家園建造」中心
+  openPetAndBuildCenter(lastWonPet = null) {
+    openPetAndBuildModal({
+      edition: 'minecraft',
+      currency: this.emeralds,
+      unlockedPets: this.unlockedPets,
+      equippedPet: this.equippedPet,
+      unlockedBuilds: this.unlockedBuilds,
+      lastWonPet,
+      onPullGacha: (wonPet, cost) => {
+        this.emeralds -= cost;
+        if (!this.unlockedPets.includes(wonPet.id)) {
+          this.unlockedPets.push(wonPet.id);
+        }
+        this.equippedPet = wonPet.id;
+        this.world.setPetCompanion(wonPet.id);
+        this.savePlayerData();
+        this.updateStatusBarUI();
+        mcSound.playAnvilLevelUp();
+        confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
+        this.showBigBanner(`🎉 恭喜孵出神獸：【${wonPet.name}】！`, wonPet.desc, '#facc15');
+        this.openPetAndBuildCenter(wonPet);
+      },
+      onEquipPet: (petId) => {
+        this.equippedPet = petId;
+        this.world.setPetCompanion(petId);
+        this.savePlayerData();
+        this.updateStatusBarUI();
+        mcSound.playDigSound();
+        this.openPetAndBuildCenter();
+      },
+      onBuyBuild: (buildItem) => {
+        if (this.emeralds < buildItem.price || this.unlockedBuilds.includes(buildItem.id)) return;
+        this.emeralds -= buildItem.price;
+        this.unlockedBuilds.push(buildItem.id);
+        this.world.updateBaseBuildings(this.unlockedBuilds);
+        this.savePlayerData();
+        this.updateStatusBarUI();
+        mcSound.playAnvilLevelUp();
+        confetti({ particleCount: 80, spread: 90, origin: { y: 0.55 } });
+        this.showBigBanner(`🏰 家園建造完成：【${buildItem.name}】！`, buildItem.desc, '#4ade80');
+        this.openPetAndBuildCenter();
+      }
+    });
   }
 
   showFeedbackModal(isSuccess, messageHtml, speechText, customBtnText = '') {
@@ -839,6 +1111,11 @@ export class MinecraftGameEngine {
       document.getElementById('shop-modal').classList.add('hidden');
     };
 
+    const petBuildBtn = document.getElementById('btn-open-pet-build');
+    if (petBuildBtn) {
+      petBuildBtn.onclick = () => this.openPetAndBuildCenter();
+    }
+
     const profileModal = document.getElementById('profile-modal');
     document.getElementById('btn-open-profile').onclick = () => {
       document.getElementById('input-player-name').value = this.playerName;
@@ -865,9 +1142,22 @@ export class MinecraftGameEngine {
     document.getElementById('btn-toggle-craft').onclick = () => {
       this.isCraftingGridActive = !this.isCraftingGridActive;
       this.refreshCraftingGrid();
+      this.refreshFloatingOres();
       this.updateStatusBarUI();
       mcSound.playDigSound();
     };
+
+    const floatToggleBtn = document.getElementById('btn-toggle-floating');
+    if (floatToggleBtn) {
+      floatToggleBtn.onclick = () => {
+        const order = ['auto', 'on', 'off'];
+        const nextIdx = (order.indexOf(this.floatingOreModeState) + 1) % order.length;
+        this.floatingOreModeState = order[nextIdx];
+        this.refreshFloatingOres();
+        this.updateStatusBarUI();
+        mcSound.playDigSound();
+      };
+    }
 
     document.getElementById('btn-download-card').onclick = () => {
       const toolObj = ANVIL_SHOP_ITEMS.find(w => w.id === this.equippedWeapon) || ANVIL_SHOP_ITEMS[0];

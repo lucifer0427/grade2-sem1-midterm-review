@@ -47,10 +47,11 @@
         </div>
       </div>
 
-      <!-- 右側：鐵砧鍛造店、披風設定、科目切換、切換棒球版、列印考卷、語音 -->
+      <!-- 右側：鐵砧鍛造店、寵物盲盒與家園建造、披風設定、科目切換、切換棒球版、列印考卷、語音 -->
       <div class="mc-controls">
         <a href="./index.html" class="mc-btn btn-baseball" title="切換至 3D 實況棒球版">⚾ 棒球版</a>
         <button class="mc-btn btn-anvil" id="btn-open-shop" title="使用綠寶石鍛造傳奇十字鎬與神劍">⚒️ 鍛造屋</button>
+        <button class="mc-btn btn-pet-build" id="btn-open-pet-build" title="抽取 3D 麥塊生物刷怪蛋與建造家園箭塔">🥚 寵物＆建造</button>
         <button class="mc-btn" id="btn-open-profile" title="自訂勇者名稱與披風編號">🛡️ <span id="hud-hero-badge">#99</span></button>
         <select id="select-mode" class="mc-select" title="選擇冒險科目或單元專項">
           <optgroup label="🏆 綜合與全科領域">
@@ -92,6 +93,7 @@
 
     <!-- 題目主幹區 -->
     <div class="question-box">
+      <div id="active-buffs-bar" class="active-buffs-bar"></div>
       <div id="hud-subject">【國語】載入中...</div>
       <div id="hud-question">載入題目中...</div>
       <div id="hud-phonetic"></div>
@@ -125,6 +127,9 @@
         </button>
         <button class="hotbar-btn hotbar-craft" id="btn-toggle-craft" title="切換「三座礦脈挖掘」與「3×3 工作台合成模式」">
           🛠️ 3×3 合成台：關閉
+        </button>
+        <button class="hotbar-btn hotbar-craft" id="btn-toggle-floating" title="開啟或關閉飛天附魔方塊動態砍擊模式">
+          👾 飛天方塊：自動穿插
         </button>
       </div>
       <div class="equipped-tool-tag" id="hud-tool-name">手持：🪵 新手木鎬</div>
