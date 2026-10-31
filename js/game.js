@@ -88,6 +88,9 @@ export class GameEngine {
     this.hits = 0;
     this.homeRuns = 0;
     this.combo = 0;
+    this.bossScore = 0;
+    this.hasShownRivalIntro = false;
+    this.victoryBonusGiven = false;
     this.bases = [false, false, false];
     this.isFeverActive = false;
     this.used5050ThisTurn = false;
@@ -255,6 +258,8 @@ export class GameEngine {
     this.hits = 0;
     this.homeRuns = 0;
     this.combo = 0;
+    this.bossScore = 0;
+    this.victoryBonusGiven = false;
     // 若已建造「傳奇名人堂黃金雕像」，開局直接保送一壘跑者！
     const hasStatue = this.unlockedBuilds.includes('gold_statue');
     this.bases = [hasStatue, false, false];
@@ -276,10 +281,21 @@ export class GameEngine {
     document.getElementById('big-banner').classList.add('banner-hidden');
 
     this.loadQuestion(0);
+
+    if (!this.hasShownRivalIntro) {
+      this.hasShownRivalIntro = true;
+      this.showBigBanner('😈 魔王主場迎戰！', '被三振出局 3 次，魔王就會反攻得 2 分！', '#f97316');
+    }
   }
 
   updateScoreboardUI() {
     document.getElementById('hud-score').textContent = this.score;
+    const bossScoreEl = document.getElementById('hud-boss-score');
+    if (bossScoreEl) bossScoreEl.textContent = this.bossScore;
+    const scorePill = document.getElementById('score-pill');
+    if (scorePill) {
+      scorePill.classList.toggle('behind', this.currentMode !== 'wrong' && this.score < this.bossScore);
+    }
     document.getElementById('hud-coins').textContent = this.coins;
     document.getElementById('hud-combo').textContent = `COMBO x${this.combo}`;
 
@@ -772,6 +788,7 @@ export class GameEngine {
 
           const isHR = hitBases === 4;
           const wasBasesLoaded = this.bases[0] && this.bases[1] && this.bases[2];
+          const scoreBeforeHit = this.score;
           const rbi = this.advanceRunners(hitBases);
 
           // 計算金幣獎勵 (基礎 + QTE手動加成 + 球棒 + 3D寵物 + 3D球場擴建設施 + 亂入事件 + 磁鐵天賦)
@@ -824,10 +841,19 @@ export class GameEngine {
           else if (isHR) bannerText = '💥 超大號全壘打 HOME RUN!';
           else if (hitBases === 2) bannerText = `🔥 深遠二壘長打 DOUBLE!`;
 
+          // 逆轉時刻：從落後或平手一棒超前，最後一局更會出現再見安打！
+          const isComeback = scoreBeforeHit <= this.bossScore && this.score > this.bossScore;
+          const isWalkOff = this.currentMode !== 'wrong' && this.currentQuestionIdx === this.questions.length - 1;
+          if (isComeback && isWalkOff) {
+            bannerText = isHR ? '🎉 再見全壘打！逆轉勝！' : '🎉 再見安打！逆轉勝！';
+          } else if (isComeback) {
+            bannerText = isHR ? '🔥 逆轉超前全壘打！' : '🔥 逆轉超前！';
+          }
+
           this.showBigBanner(bannerText, statcastStr, isHR ? '#fef08a' : '#38bdf8');
 
-          if (isHR) {
-            confetti({ particleCount: 95, spread: 85, origin: { y: 0.55 } });
+          if (isHR || (isComeback && isWalkOff)) {
+            confetti({ particleCount: isHR ? 95 : 70, spread: 85, origin: { y: 0.55 } });
           }
 
           const wasGuidedSuccess = this.strikesThisTurn > 0;
@@ -892,10 +918,17 @@ export class GameEngine {
       } else {
         this.outs++;
         if (this.outs >= 3) {
-          outNotice = '<br><br>⚠️ <b>三出局攻守交換（壘上跑者清空）！</b>';
           this.outs = 0;
           this.bases = [false, false, false];
-          this.showBigBanner('❌ 三出局 3 OUTS!', '', '#ef4444');
+          if (this.currentMode !== 'wrong') {
+            // 魔王趁攻守交換發動反攻，每次三出局攻下 2 分，製造逆轉張力！
+            this.bossScore += 2;
+            outNotice = `<br><br>😈 <b>魔王趁勢反攻攻下 2 分！目前我方 ${this.score} : ${this.bossScore} 魔王，快用安打追回來！</b>`;
+            this.showBigBanner('😈 三出局！魔王反攻 2 分', `我方 ${this.score} : ${this.bossScore} 魔王`, '#ef4444');
+          } else {
+            outNotice = '<br><br>⚠️ <b>三出局攻守交換（壘上跑者清空）！</b>';
+            this.showBigBanner('❌ 三出局 3 OUTS!', '特訓模式不計對手分數，繼續加油！', '#ef4444');
+          }
         } else {
           this.showBigBanner('⚡ 揮棒落空 STRIKE OUT!', '', '#ef4444');
         }
@@ -1164,10 +1197,39 @@ export class GameEngine {
       playerBadge.textContent = `👕 選手：${this.playerName} ｜ 背號：#${this.jerseyNumber}`;
     }
 
+    // 結算敵我比分：勝利可獲得 50 金幣獎金，落後也能看見「差幾分」再挑戰！
+    const isPractice = this.currentMode === 'wrong';
+    const isWin = !isPractice && this.score > this.bossScore;
+    const isDraw = !isPractice && this.score === this.bossScore;
+    const resultEl = document.getElementById('final-result');
+
+    if (isWin && !this.victoryBonusGiven) {
+      this.victoryBonusGiven = true;
+      this.coins += 50;
+      this.savePlayerData();
+    }
+
+    if (resultEl) {
+      if (isPractice) {
+        resultEl.textContent = `🎯 錯題特訓完成！錯題庫還有 ${this.wrongQuestions.length} 題待補強`;
+        resultEl.style.color = '#86efac';
+      } else if (isWin) {
+        resultEl.textContent = `🏆 勝利！我方 ${this.score} : ${this.bossScore} 魔王　+50💰`;
+        resultEl.style.color = '#fef08a';
+      } else if (isDraw) {
+        resultEl.textContent = `🤝 平手！我方 ${this.score} : ${this.bossScore} 魔王，一棒就能帶走勝利！`;
+        resultEl.style.color = '#38bdf8';
+      } else {
+        resultEl.textContent = `😤 惜敗！我方 ${this.score} : ${this.bossScore} 魔王（只差 ${this.bossScore - this.score} 分）`;
+        resultEl.style.color = '#f87171';
+      }
+    }
+
     let rankTitle = '🌱 少棒新秀';
-    if (this.score >= 12) rankTitle = '👑 期中大聯盟傳奇 MVP';
-    else if (this.score >= 7) rankTitle = '🔥 台灣無雙巨砲';
-    else if (this.score >= 3) rankTitle = '⚡ 校隊黃金四番';
+    if (isWin && this.score >= 12) rankTitle = '👑 期中大聯盟傳奇 MVP';
+    else if (isWin) rankTitle = '🔥 逆轉勝英雄';
+    else if (isDraw) rankTitle = '⚡ 纏鬥到底的勇者';
+    else if (!isPractice && this.score >= 3) rankTitle = '💪 永不放棄的挑戰者';
     this.lastRankTitle = rankTitle;
     this.lastAvg = avg;
     document.getElementById('final-rank-title').textContent = `獲得稱號：${rankTitle}（累計金幣：💰${this.coins}）`;
@@ -1185,7 +1247,14 @@ export class GameEngine {
 
     confetti({ particleCount: 160, spread: 110, origin: { y: 0.5 } });
     modal.classList.remove('hidden');
-    soundCtrl.speakText(`比賽結束！${this.playerName}選手總共攻下 ${this.score} 分，打出 ${this.homeRuns} 支全壘打！`);
+    const resultSpeech = isPractice
+      ? '錯題特訓完成！'
+      : isWin
+        ? `勝利！我方 ${this.score} 分，魔王 ${this.bossScore} 分！`
+        : isDraw
+          ? `平手！我方 ${this.score} 分，魔王 ${this.bossScore} 分！`
+          : `惜敗！我方 ${this.score} 分，魔王 ${this.bossScore} 分，再挑戰一次！`;
+    soundCtrl.speakText(`比賽結束！${resultSpeech}${this.playerName}選手打出 ${this.homeRuns} 支全壘打！`);
   }
 
   setupEvents() {

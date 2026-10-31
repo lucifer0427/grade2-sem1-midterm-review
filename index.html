@@ -38,7 +38,9 @@
 
       <!-- 中央：得分、金幣、連擊、出局燈號與鑽石壘包圖 -->
       <div class="tv-center-group">
-        <div class="score-pill">得分 <b id="hud-score">0</b></div>
+        <div class="score-pill" id="score-pill" title="我方得分 : 魔王得分（累積 3 次出局時，魔王會趁勢攻下 2 分！）">
+          我方 <b id="hud-score">0</b><span class="score-vs">:</span><b id="hud-boss-score" class="boss-score">0</b> 魔王
+        </div>
         <div class="coin-pill" title="答對賺取金幣解鎖神兵球棒！">💰 <b id="hud-coins">0</b></div>
         <div class="combo-pill" id="hud-combo">COMBO x0</div>
         <div class="outs-pill">
@@ -211,6 +213,7 @@
     <div class="modal-card">
       <h2 class="modal-title" style="color: #f59e0b;">🏆 期中考大聯盟 MVP 選手卡</h2>
       <p id="final-player-badge" style="color: #fef08a; font-weight: 900; font-size: 16px; margin-bottom: 4px;"></p>
+      <p id="final-result" style="font-weight: 900; font-size: 20px; margin-bottom: 6px;"></p>
       <p id="final-rank-title" style="color: #38bdf8; font-weight: bold; font-size: 18px; margin-bottom: 6px;">稱號：台灣巨砲</p>
       
       <div class="mvp-stats">
