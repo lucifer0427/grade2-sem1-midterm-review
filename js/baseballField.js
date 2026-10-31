@@ -340,6 +340,20 @@ export class BaseballField {
     group.uniformMaterials = [uniformMat];
 
     if (hasBat) {
+      // 3D 球衣背面動態背號牌 (CanvasTexture)
+      const numCanvas = document.createElement('canvas');
+      numCanvas.width = 128;
+      numCanvas.height = 128;
+      const numTex = new THREE.CanvasTexture(numCanvas);
+      const backPatchMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true, side: THREE.DoubleSide });
+      const backPatch = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.56), backPatchMat);
+      backPatch.position.set(0, 1.48, -0.45);
+      backPatch.rotation.y = Math.PI;
+      group.add(backPatch);
+      group.numCanvas = numCanvas;
+      group.numTex = numTex;
+      this.drawJerseyNumberCanvas(numCanvas, numTex, '99');
+
       const batPivot = new THREE.Group();
       const batMat = new THREE.MeshStandardMaterial({
         color: 0xd97706,
@@ -376,6 +390,27 @@ export class BaseballField {
     }
 
     return group;
+  }
+
+  drawJerseyNumberCanvas(canvas, texture, numStr) {
+    if (!canvas || !texture) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fef08a';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 6;
+    ctx.font = '900 72px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const text = String(numStr || '99').slice(0, 2);
+    ctx.strokeText(text, 64, 66);
+    ctx.fillText(text, 64, 66);
+    texture.needsUpdate = true;
+  }
+
+  updateBatterJerseyNumber(numStr) {
+    if (!this.batterGroup) return;
+    this.drawJerseyNumberCanvas(this.batterGroup.numCanvas, this.batterGroup.numTex, numStr);
   }
 
   // 切換 3D 神兵球棒外觀
@@ -599,15 +634,21 @@ export class BaseballField {
     // 跑者繞壘慶祝動畫
     if (this.activeRunningAnim) {
       this.activeRunningAnim.progress = Math.min(1, this.activeRunningAnim.progress + 0.018);
-      const totalSeg = this.activeRunningAnim.progress * 4;
-      const segIdx = Math.min(3, Math.floor(totalSeg));
-      const segT = totalSeg - segIdx;
-      const from = this.baseCoords[segIdx];
-      const to = this.baseCoords[(segIdx + 1) % 4];
+      if (this.activeRunningAnim.progress >= 1) {
+        this.activeRunningAnim = null;
+        this.batterGroup.position.set(-1.25, 0, 27.5);
+        this.batterGroup.rotation.set(0, Math.PI / 2.2, 0);
+      } else {
+        const totalSeg = this.activeRunningAnim.progress * 4;
+        const segIdx = Math.min(3, Math.floor(totalSeg));
+        const segT = totalSeg - segIdx;
+        const from = this.baseCoords[segIdx];
+        const to = this.baseCoords[(segIdx + 1) % 4];
 
-      this.batterGroup.position.lerpVectors(from, to, segT);
-      this.batterGroup.position.y = Math.abs(Math.sin(time * 18)) * 0.35;
-      this.batterGroup.lookAt(to);
+        this.batterGroup.position.lerpVectors(from, to, segT);
+        this.batterGroup.position.y = Math.abs(Math.sin(time * 18)) * 0.35;
+        this.batterGroup.lookAt(to);
+      }
     }
 
     // 氣場旋轉

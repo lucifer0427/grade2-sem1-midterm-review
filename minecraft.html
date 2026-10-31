@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>國小二年級期中考：3D 麥塊方塊冒險版 (Minecraft Edition)</title>
+  <link rel="stylesheet" href="./css/minecraft.css">
+  <link rel="manifest" href="./manifest.json">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://esm.sh/three@0.170.0",
+      "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.4"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- 3D 麥塊體素世界畫布 -->
+  <div id="canvas-container"></div>
+
+  <!-- 巨型挖礦暴擊與紅石傷害橫幅 -->
+  <div id="big-banner" class="banner-hidden">
+    <div id="banner-main">💎 紅石超載暴擊！</div>
+    <div id="banner-statcast">⚔️ 屠龍傷害：250 點 ｜ 🟢 +40 綠寶石</div>
+  </div>
+
+  <!-- 頂部麥塊生態域魔王看板與題目區 -->
+  <div id="mc-hud-top" class="mc-panel">
+    <div class="mc-status-bar">
+      <!-- 左側：關卡、生態域與守關魔王 -->
+      <div class="mc-left-group">
+        <div class="stage-badge" id="hud-stage">第 1 / 9 關</div>
+        <div class="boss-badge" id="hud-boss">🧟 巨型苦力怕隊長</div>
+      </div>
+
+      <!-- 中央：屠龍總傷、綠寶石、連擊與愛心血條 -->
+      <div class="mc-center-group">
+        <div class="dmg-pill">⚔️ 傷害 <b id="hud-dmg">0</b></div>
+        <div class="emerald-pill" title="答對賺取綠寶石鍛造傳奇神兵！">🟢 <b id="hud-emeralds">40</b></div>
+        <div class="combo-pill" id="hud-combo">COMBO x0</div>
+        <div class="hearts-pill" title="勇者愛心生命值（歸零時觸發不死圖騰復活！）">
+          <span class="heart-icon" id="heart-1">❤️</span>
+          <span class="heart-icon" id="heart-2">❤️</span>
+          <span class="heart-icon" id="heart-3">❤️</span>
+        </div>
+      </div>
+
+      <!-- 右側：鐵砧鍛造店、披風設定、科目切換、切換棒球版、列印考卷、語音 -->
+      <div class="mc-controls">
+        <a href="./index.html" class="mc-btn btn-baseball" title="切換至 3D 實況棒球版">⚾ 棒球版</a>
+        <button class="mc-btn btn-anvil" id="btn-open-shop" title="使用綠寶石鍛造傳奇十字鎬與神劍">⚒️ 鍛造屋</button>
+        <button class="mc-btn" id="btn-open-profile" title="自訂勇者名稱與披風編號">🛡️ <span id="hud-hero-badge">#99</span></button>
+        <select id="select-mode" class="mc-select" title="選擇冒險科目或單元專項">
+          <optgroup label="🏆 綜合與全科領域">
+            <option value="all">⛏️ 綜合大冒險 (150題)</option>
+            <option value="chinese">📖 康軒國語全範圍 (50題)</option>
+            <option value="math">🔢 翰林數學全範圍 (50題)</option>
+            <option value="life">🌱 生活課程全範圍 (50題)</option>
+          </optgroup>
+          <optgroup label="📖 康軒國語・題型專項">
+            <option value="chi_poly">🔤 國語：多音字辨析 (10題)</option>
+            <option value="chi_typo">🔍 國語：形近字與改錯 (10題)</option>
+            <option value="chi_radical">🧩 國語：部首與部件 (12題)</option>
+            <option value="chi_reading">📚 國語：第1~6課文意 (10題)</option>
+            <option value="chi_grammar">✍️ 國語：短語量詞與句型 (8題)</option>
+          </optgroup>
+          <optgroup label="🔢 翰林數學・單元專項">
+            <option value="math_u1">💯 數學U1：200以內的數 (12題)</option>
+            <option value="math_u2">➕ 數學U2：二位數加減法 (12題)</option>
+            <option value="math_u3">📏 數學U3：公分與斷尺 (10題)</option>
+            <option value="math_u4">🛤️ 數學U4：兩步驟應用 (10題)</option>
+            <option value="math_u5">📐 數學U5：平面圖形與直線 (6題)</option>
+          </optgroup>
+          <optgroup label="🌱 生活課程・主題專項">
+            <option value="life_u1">🍁 生活U1：秋天的觀察 (13題)</option>
+            <option value="life_u2">☀️ 生活U2：光與影子的遊戲 (15題)</option>
+            <option value="life_u3">🏘️ 生活U3：認識社區生活 (12題)</option>
+            <option value="life_u4">🛡️ 生活U4：校園安全與自理 (10題)</option>
+          </optgroup>
+          <optgroup label="🎯 弱點補強">
+            <option value="wrong" hidden>🎯 錯題地牢特訓</option>
+          </optgroup>
+        </select>
+        <button class="mc-btn btn-wrong hidden" id="btn-wrong-mode">🎯 錯題 (0)</button>
+        <a href="./print-exam.html" target="_blank" class="mc-btn btn-print" title="列印 A4 紙本考卷">🖨️ 考卷</a>
+        <button class="mc-btn" id="btn-speak" title="朗讀題目">📢 念題</button>
+        <button class="mc-btn" id="btn-mute" title="音效開關">🔊</button>
+      </div>
+    </div>
+
+    <!-- 題目主幹區 -->
+    <div class="question-box">
+      <div id="hud-subject">【國語】載入中...</div>
+      <div id="hud-question">載入題目中...</div>
+      <div id="hud-phonetic"></div>
+    </div>
+
+    <!-- 數學第 3 單元：紅石活塞方塊量尺 -->
+    <div id="ruler-widget-container" class="hidden"></div>
+
+    <!-- 數學第 4 單元：動力鐵軌礦車兩步驟連鎖 -->
+    <div id="minecart-chain-container" class="hidden"></div>
+
+    <!-- 生活科第 2 單元：麥塊方塊日晷與光影實驗台 -->
+    <div id="shadow-lab-container" class="hidden"></div>
+  </div>
+
+  <!-- 3x3 工作台合成面板 (開啟工作台模式時浮現) -->
+  <div id="crafting-overlay" class="mc-panel hidden">
+    <div class="craft-header">🛠️ 3×3 傳奇工作台（點擊正確的材料方塊合成必殺一擊！）</div>
+    <div id="crafting-grid" class="craft-grid"></div>
+  </div>
+
+  <!-- 底部麥塊快捷列 Hotbar + 紅石充能暴擊槽 + 三座礦脈挖掘鍵 -->
+  <div id="mining-controls">
+    <div class="hotbar-row">
+      <div class="hotbar-left">
+        <button class="hotbar-btn" id="btn-skill-potion" title="消耗 20 綠寶石，將一個錯誤礦石石化為基岩！">
+          🧪 真視藥水 <span>(🟢20 刪一錯)</span>
+        </button>
+        <button class="hotbar-btn hotbar-tnt" id="btn-skill-tnt" title="消耗 40 綠寶石，本回合必出紅石 TNT 三倍大爆擊！">
+          🧨 超級 TNT 充能 <span>(🟢40 必爆擊)</span>
+        </button>
+        <button class="hotbar-btn hotbar-craft" id="btn-toggle-craft" title="切換「三座礦脈挖掘」與「3×3 工作台合成模式」">
+          🛠️ 3×3 合成台：關閉
+        </button>
+      </div>
+      <div class="equipped-tool-tag" id="hud-tool-name">手持：🪵 新手木鎬</div>
+    </div>
+
+    <!-- 紅石充能暴擊條 -->
+    <div class="redstone-bar-wrapper mc-panel">
+      <div class="redstone-label">⚡ 紅石充能暴擊槽 (瞄準中央紅石超載區揮鎬，觸發 TNT 三倍傷害！)</div>
+      <div class="redstone-track">
+        <div class="rs-normal">普通挖掘</div>
+        <div class="rs-power">強化重擊</div>
+        <div class="rs-crit">🧨紅石超載暴擊🧨</div>
+        <div class="rs-power">強化重擊</div>
+        <div class="rs-normal">普通挖掘</div>
+        <div id="redstone-cursor"></div>
+      </div>
+    </div>
+
+    <!-- 左、中、右三座礦脈按鈕 -->
+    <div id="options-container"></div>
+  </div>
+
+  <!-- 🛡️ 勇者名稱與披風編號設定視窗 -->
+  <div id="profile-modal" class="modal-overlay hidden">
+    <div class="modal-card mc-panel">
+      <h2 class="modal-title" style="color: #4ade80;">🛡️ 客製化麥塊勇者與披風編號</h2>
+      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 14px;">
+        設定你的勇者名字與幸運編號，會即時印在 3D 勇者披風背後與屠龍英雄成就卡上！（與棒球版分開獨立儲存）
+      </p>
+      <div class="profile-form">
+        <label class="profile-label">
+          <span>勇者名稱：</span>
+          <input type="text" id="input-player-name" class="profile-input" maxlength="8" placeholder="例如：鑽石小勇者">
+        </label>
+        <label class="profile-label">
+          <span>披風編號 (0~99)：</span>
+          <input type="number" id="input-hero-id" class="profile-input" min="0" max="99" placeholder="99">
+        </label>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px;">
+        <button class="action-btn" id="btn-save-profile">✅ 儲存並披上披風</button>
+        <button class="mc-btn" id="btn-close-profile" style="padding: 10px 18px;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚒️ 鐵砧神兵鍛造屋彈窗 -->
+  <div id="shop-modal" class="modal-overlay hidden">
+    <div class="modal-card mc-panel" style="max-width: 600px;">
+      <h2 class="modal-title" style="color: #4ade80;">⚒️ 鐵砧傳奇神兵鍛造屋</h2>
+      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 10px;">
+        目前擁有綠寶石：<b style="color: #4ade80; font-size: 20px;" id="shop-emerald-count">0</b> 🟢（麥塊版獨立錢包，挖對礦石即可獲得！）
+      </p>
+      <div class="shop-grid" id="shop-items-container"></div>
+      <button class="action-btn" id="btn-close-shop" style="margin-top: 14px;">回到礦區 ⛏️</button>
+    </div>
+  </div>
+
+  <!-- 單題結果與村莊圖書管理員引導彈窗 -->
+  <div id="feedback-modal" class="modal-overlay hidden">
+    <div class="modal-card mc-panel">
+      <h2 class="modal-title" id="feedback-title">💎 完美挖出鑽石！</h2>
+      <div class="modal-msg" id="feedback-msg">挖掘詳情</div>
+      <button class="action-btn" id="btn-next">下一座礦脈 ⛏️ (空白鍵)</button>
+    </div>
+  </div>
+
+  <!-- 賽後屠龍英雄成就卡結算彈窗 -->
+  <div id="final-modal" class="modal-overlay hidden">
+    <div class="modal-card mc-panel">
+      <h2 class="modal-title" style="color: #4ade80;">🏆 期中考麥塊屠龍英雄成就卡</h2>
+      <p id="final-player-badge" style="color: #fef08a; font-weight: 900; font-size: 16px; margin-bottom: 4px;"></p>
+      <p id="final-rank-title" style="color: #38bdf8; font-weight: bold; font-size: 18px; margin-bottom: 6px;"></p>
+
+      <div class="mvp-stats">
+        <div class="stat-item">
+          <span class="stat-label">採礦精準率</span>
+          <span class="stat-val" id="final-acc">100%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">TNT 爆擊數</span>
+          <span class="stat-val" id="final-crits">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">屠龍總傷害</span>
+          <span class="stat-val" id="final-dmg">0</span>
+        </div>
+      </div>
+
+      <div id="final-wrong-summary" class="modal-msg" style="text-align: center;"></div>
+
+      <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <button class="action-btn" id="btn-restart">再次展開冒險 🔄</button>
+        <button class="action-btn" style="background:#0284c7;color:#fff;" id="btn-download-card">📸 下載英雄卡 (PNG)</button>
+        <button class="action-btn hidden" style="background:#dc2626;color:#fff;" id="btn-final-wrong">🎯 挑戰錯題地牢</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { MinecraftGameEngine } from './js/minecraftGame.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      new MinecraftGameEngine();
+    });
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

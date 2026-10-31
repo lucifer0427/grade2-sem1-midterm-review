@@ -39,8 +39,8 @@ export const CHINESE_QUESTIONS = [
     question: "「微風輕輕的吹[著]。」框起來的「著」讀音是？",
     phonetic: "ㄨㄟˊ ㄈㄥ ㄑㄧㄥ ㄑㄧㄥ ˙ㄉㄜ ㄔㄨㄟ 【 ？ 】",
     options: [
-      { text: "ㄓㄨㄛˊ (二聲)", isCorrect: false, hitResult: "高飛球被接殺！二聲是著急、穿著。" },
-      { text: "ㄓㄠ (一聲)", isCorrect: false, hitResult: "界外球！一聲是著涼、睡著。" },
+      { text: "ㄓㄨㄛˊ (二聲)", isCorrect: false, hitResult: "高飛球被接殺！ㄓㄨㄛˊ是穿著、著急。" },
+      { text: "ㄓㄠˊ (二聲)", isCorrect: false, hitResult: "界外球！ㄓㄠˊ是著涼、睡著。" },
       { text: "˙ㄓㄜ (輕聲)", isCorrect: true, hitResult: "轟出右外野看台！全壘打！" }
     ],
     hint: "表示動作正在持續進行（吹著、走著、看著），讀輕聲「˙ㄓㄜ」！"
@@ -63,7 +63,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "統整活動二",
     question: "「星期天你有一點[空]閒嗎？」框起來的「空」讀音是？",
-    phonetic: "ㄒㄧㄥ ㄑㄧˊ ㄊㄧㄢ ㄋㄧˇ ㄧㄡˇ 【 ？ 】 ㄒㄧㄢˊ ˙ㄇㄚ",
+    phonetic: "ㄒㄧㄥ ㄑㄧˊ ㄊㄧㄢ ㄋㄧˇ ㄧㄡˇ ㄧˋ ㄉㄧㄢˇ 【 ？ 】 ㄒㄧㄢˊ ˙ㄇㄚ",
     options: [
       { text: "ㄎㄨㄥ (一聲)", isCorrect: false, hitResult: "投手正面接殺！一聲是天空、空氣。" },
       { text: "ㄎㄨㄥˋ (四聲)", isCorrect: true, hitResult: "中外野大號全壘打！" },
@@ -76,7 +76,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第四課 運動會",
     question: "「風車在風中一直[轉]動。」框起來的「轉」讀音是？",
-    phonetic: "ㄈㄥ ㄔㄜ ㄧˋ ㄓˊ 【 ？ 】 ㄉㄨㄥˋ",
+    phonetic: "ㄈㄥ ㄔㄜ ㄗㄞˋ ㄈㄥ ㄓㄨㄥ ㄧˋ ㄓˊ 【 ？ 】 ㄉㄨㄥˋ",
     options: [
       { text: "ㄓㄨㄢˋ (四聲)", isCorrect: true, hitResult: "一棒扛出全壘打牆！" },
       { text: "ㄓㄨㄢˇ (三聲)", isCorrect: false, hitResult: "擦棒出局！三聲是轉彎、轉身。" },
@@ -89,7 +89,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第一課 新學年新希望",
     question: "「弟弟今天自己[背]著大書包上學。」框起來的「背」讀音是？",
-    phonetic: "ㄉㄧˋ ˙ㄉㄧ 【 ？ 】 ˙ㄓㄜ ㄉㄚˋ ㄕㄨ ㄅㄠ",
+    phonetic: "ㄉㄧˋ ˙ㄉㄧ ㄐㄧㄣ ㄊㄧㄢ ㄗˋ ㄐㄧˇ 【 ？ 】 ˙ㄓㄜ ㄉㄚˋ ㄕㄨ ㄅㄠ ㄕㄤˋ ㄒㄩㄝˊ",
     options: [
       { text: "ㄅㄟ (一聲)", isCorrect: true, hitResult: "超大號安打送回兩分！" },
       { text: "ㄅㄟˋ (四聲)", isCorrect: false, hitResult: "擊球無力滾地！四聲是後背、背影。" },
@@ -115,7 +115,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第五課 坐竹籃船",
     question: "「小明[假]裝成一隻兇猛的老虎。」框起來的「假」讀音是？",
-    phonetic: "ㄒㄧㄠˇ ㄇㄧㄥˊ 【 ？ 】 ㄓㄨㄤ ㄔㄥˊ ㄌㄠˇ ㄏㄨˇ",
+    phonetic: "ㄒㄧㄠˇ ㄇㄧㄥˊ 【 ？ 】 ㄓㄨㄤ ㄔㄥˊ ㄧˋ ㄓ ㄒㄩㄥ ㄇㄥˇ ˙ㄉㄜ ㄌㄠˇ ㄏㄨˇ",
     options: [
       { text: "ㄐㄧㄚˇ (三聲)", isCorrect: true, hitResult: "強勁安打！跑者衝回本壘！" },
       { text: "ㄐㄧㄚˋ (四聲)", isCorrect: false, hitResult: "游擊手攔截出局！四聲是放假。" },
@@ -128,7 +128,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第六課 小鎮的柿餅節",
     question: "「藍藍的天[空]飄著幾朵白雲。」框起來的「空」讀音是？",
-    phonetic: "ㄌㄢˊ ㄌㄢˊ ˙ㄉㄜ ㄊㄧㄢ 【 ？ 】",
+    phonetic: "ㄌㄢˊ ㄌㄢˊ ˙ㄉㄜ ㄊㄧㄢ 【 ？ 】 ㄆㄧㄠ ˙ㄓㄜ ㄐㄧˇ ㄉㄨㄛˇ ㄅㄞˊ ㄩㄣˊ",
     options: [
       { text: "ㄎㄨㄥ (一聲)", isCorrect: true, hitResult: "轟破記分板！全壘打！" },
       { text: "ㄎㄨㄥˋ (四聲)", isCorrect: false, hitResult: "揮棒落空！四聲是有空、空地。" },

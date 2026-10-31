@@ -1,0 +1,10 @@
+{
+  "name": "國小二年級期中考：3D 實況棒球 ＆ 麥塊雙引擎複習系統",
+  "short_name": "小二期中3D王",
+  "description": "108 課綱國小二年級上學期期中考複習（康軒國語、翰林數學、生活課程共 150 題），含 3D 實況棒球版、3D 麥塊體素版與 A4 考卷列印器。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#2563eb",
+  "orientation": "any"
+}

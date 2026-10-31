@@ -47,39 +47,90 @@ function maskAnswerInHint(questionObj, correctText) {
     });
   }
 
-  // 5. 處理部首題（例如 "日部"、"肉部 (常寫成月字旁)"）
+  // 5. 處理部首與筆畫題（例如 "日部"、"肉部 (常寫成月字旁)"、"14 畫，舛部"）
   if (questionObj.question.includes('部首') || questionObj.question.includes('部件')) {
     const basePart = cleanCorrect.split(/\s|\(|，/)[0].trim();
     if (basePart) {
       masked = masked.split(basePart).join('【 ❓ 】');
     }
+    const radicalCharMatch = cleanCorrect.match(/([一-龥])部/);
+    if (radicalCharMatch) {
+      const rChar = radicalCharMatch[1];
+      masked = masked.replace(new RegExp(`${rChar}（[^）]+）部`, 'g'), '【 ❓ 】部');
+      masked = masked.split(`${rChar}部`).join('【 ❓ 】部');
+    }
     masked = masked.replace(/「[日田肉青舛走竹二食米]部?」/g, '「 ❓ 部」');
+    if (questionObj.question.includes('幾畫')) {
+      masked = masked.replace(/共\s*\d+\s*畫/g, '共 【 ❓ 】 畫');
+    }
   }
 
-  // 6. 處理數學答案中的數字：只遮罩算式結果或句尾結論數字（使用獨立數字邊界避免切到 100）
+  // 6. 處理答案中的數字：只遮罩算式結果、刻度或關鍵結論數字（使用獨立數字邊界避免切到 100）
   const numMatch = cleanCorrect.match(/\d+/g);
   if (numMatch && numMatch.length === 1) {
     const targetNum = numMatch[0];
     const conclusionRegex = new RegExp(
-      `([=＝]|答案是|合起來是|結果是|現在有|相差|共長|剩下|共有|讀作|記作|就是|變成|等於|下邊也是|大約就是|可以換)\\s*${targetNum}(?!\\d)`,
+      `([=＝]|答案是|合起來是|結果是|現在有|相差|共長|剩下|共有|讀作|記作|就是|變成|等於|下邊也是|大約就是|可以換|剛好是|撥打|中午)\\s*${targetNum}(?!\\d)`,
       'g'
     );
     masked = masked.replace(conclusionRegex, '$1 【 ❓ 】');
+    // 若題目正解包含「N 公分 / N 大格 / N 點」，同步遮罩詳解括號或句尾中的同數字結論
+    masked = masked.replace(new RegExp(`（${targetNum}\\s*公分）`, 'g'), '（【 ❓ 】公分）');
+  } else if (numMatch && numMatch.length > 1 && questionObj.subject === '數學') {
+    // 針對多重數字選項（例如 math_11 付錢方式、math_20 加減驗算算式）遮罩關鍵結論
+    masked = masked
+      .replace(/30\s*元（3個10元）\s*＋\s*5\s*元/g, '【 ❓ 】元（幾個 10 元與幾個 1 元？）')
+      .replace(/剩下的\s*48\s*＋\s*減去的\s*37\s*＝\s*原來的\s*85/g, '剩下的 48 ＋ 減去的 37 ＝ 【 ❓ 】');
   }
 
-  // 7. 若經過上述處理後，masked 完全沒出現 ❓，將句尾最後關鍵結論遮罩
-  if (!masked.includes('❓')) {
-    const corePart = cleanCorrect.split(/\s|\(|（/)[0].trim();
-    if (corePart && corePart.length >= 2 && !/^\d+$/.test(corePart) && masked.includes(corePart)) {
-      masked = masked.split(corePart).join('【 ❓ 】');
-    } else {
-      const clauses = masked.split(/[，、；：]/);
-      if (clauses.length >= 2) {
-        clauses[clauses.length - 1] = '所以正確答案就是【 ❓ 】囉！';
-        masked = clauses.join('，');
-      } else {
-        masked = `${masked.replace(/[！!。]$/, '')}，想一想哪一個選項最符合【 ❓ 】呢？`;
+  // 7. 針對文意理解與生活課程選項：遮罩「出現在正確選項中、但未出現在題目題幹中」的核心答案詞塊
+  if (questionObj.subject === '生活' || !masked.includes('❓')) {
+    const qStem = questionObj.question || '';
+    const stopWords = new Set([
+      '因為', '所以', '可以', '一個', '一起', '我們', '大家', '沒有', '都是', '都有',
+      '自己', '不會', '不要', '先用', '再把', '或是', '而且', '如果', '時候', '地方', '比較'
+    ]);
+    const rawSegments = cleanCorrect
+      .split(/[的與和或在、，（）()\s／：]+/)
+      .map(s => s.trim())
+      .filter(s => s.length >= 2 && !/^\d+$/.test(s) && !stopWords.has(s));
+
+    const candidateTokens = [];
+    for (const seg of rawSegments) {
+      if (!qStem.includes(seg)) {
+        candidateTokens.push(seg);
       }
+      if (seg.length >= 4) {
+        for (let len = Math.min(5, seg.length - 1); len >= 2; len--) {
+          for (let i = 0; i <= seg.length - len; i++) {
+            const sub = seg.slice(i, i + len);
+            if (!stopWords.has(sub) && !qStem.includes(sub)) {
+              candidateTokens.push(sub);
+            }
+          }
+        }
+      }
+    }
+
+    // 由長到短遮罩非題幹之答案核心詞
+    candidateTokens.sort((a, b) => b.length - a.length);
+    for (const tk of candidateTokens) {
+      if (masked.includes(tk)) {
+        masked = masked.split(tk).join('【 ❓ 】');
+      }
+    }
+    // 合併連續的【 ❓ 】避免視覺破碎
+    masked = masked.replace(/(【\s*❓\s*】[\s，、]*){2,}/g, '【 ❓ 】');
+  }
+
+  // 8. 保底機制：若經過上述處理後仍未出現 ❓，將最後一個子句遮罩為【 ❓ 】
+  if (!masked.includes('❓')) {
+    const clauses = masked.split(/[，、；：]/);
+    if (clauses.length >= 2) {
+      clauses[clauses.length - 1] = '所以正確答案就是【 ❓ 】囉！';
+      masked = clauses.join('，');
+    } else {
+      masked = `想一想哪一個選項最符合【 ❓ 】呢？`;
     }
   }
 
@@ -121,6 +172,22 @@ function buildSocraticStep1(questionObj) {
       return `先拆解題目的詞語結構！把剩下的兩個選項分別放進句子裡念一次，哪一個詞性結構完全相同、而且念起來最自然通順？`;
     }
     return `回想課文『${unit}』的故事畫面，主角在哪裡、看到了什麼或做了什麼事？順著課文情節想一想就能找到答案囉！`;
+  }
+
+  // 生活科引導策略
+  if (questionObj.subject === '生活') {
+    if (unit.includes('秋天的觀察')) {
+      return `回想秋天到校園觀察的經驗！注意題目問的 ${keyPhrase}：秋天天氣變涼變乾燥、楓葉轉紅，而且觀察動植物時一定要記得「愛護自然、不攀折、不隨便觸碰」喔！`;
+    }
+    if (unit.includes('光與影子')) {
+      return `💡 光與影必勝三大口訣：① 影子永遠在光源的「相反方向」；② 中午太陽最高「影子最短」、早晚斜射「影子長」；③ 離手電筒越近「影子越大」！你也可以點上方的光影模擬台試試看喔！`;
+    }
+    if (unit.includes('社區生活')) {
+      return `想一想我們住的社區！注意題目問的 ${keyPhrase}：寄信去郵局、救火救護打 119 找消防隊、抓小偷打 110 找警察，走過小巷與公園時要怎樣做最有公德心？`;
+    }
+    if (unit.includes('校園安全')) {
+      return `回想二年級的校園安全與好習慣！注意 ${keyPhrase}：走廊轉角不奔跑、運動前先暖身、睡前自己整理書包、受傷去健康中心找護理師，哪一個選項最安全正確？`;
+    }
   }
 
   // 數學科引導策略

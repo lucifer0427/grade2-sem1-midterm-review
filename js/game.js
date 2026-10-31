@@ -8,10 +8,17 @@
  */
 import * as THREE from 'three';
 import confetti from 'canvas-confetti';
-import { getGameQuestions, shuffleArray } from './curriculum.js';
+import { getGameQuestions, shuffleArray, QUESTION_MAP } from './curriculum.js';
 import { BaseballField } from './baseballField.js';
 import { soundCtrl } from './audio.js';
 import { buildGuidedCoachingData } from './guidedTeaching.js';
+import {
+  renderRulerWidget,
+  renderBaseRunningChainWidget,
+  renderShadowLabWidget,
+  renderStrikeZoneGrid,
+  generateAndDownloadPlayerCard
+} from './specialModes.js';
 
 const PITCH_TYPES = [
   { name: '🔥 152km 火焰直球', speed: 32, curve: 0 },
@@ -59,9 +66,11 @@ export class GameEngine {
     this.currentMode = 'all';
     this.questions = [];
     this.wrongQuestions = [];
+    this.seenQuestionIds = new Set();
     this.currentQuestionIdx = 0;
+    this.isStrikeZoneGridActive = false;
 
-    // 載入玩家金幣與已解鎖球棒存檔 (初次遊玩贈送 40 開局金幣！)
+    // 載入玩家金幣、球棒、錯題本、已讀題池與球衣背號存檔
     this.loadPlayerSave();
 
     this.score = 0;
@@ -95,6 +104,7 @@ export class GameEngine {
     this.initThree();
     this.field = new BaseballField(this.scene);
     this.field.equipBatSkin(this.equippedBat);
+    this.field.updateBatterJerseyNumber(this.jerseyNumber);
     this.setupEvents();
     this.startNewGame('all');
     this.animate();
@@ -107,10 +117,29 @@ export class GameEngine {
       const savedBats = localStorage.getItem('g2_baseball_bats');
       this.unlockedBats = savedBats ? JSON.parse(savedBats) : ['wood'];
       this.equippedBat = localStorage.getItem('g2_baseball_equipped') || 'wood';
+
+      // 載入選手名字與背號
+      this.playerName = localStorage.getItem('g2_baseball_player_name') || '台灣小巨砲';
+      this.jerseyNumber = localStorage.getItem('g2_baseball_jersey_num') || '99';
+
+      // 載入跨場次錯題本 ID 並還原為題目物件
+      const savedWrongIds = localStorage.getItem('g2_baseball_wrong_ids');
+      if (savedWrongIds) {
+        const ids = JSON.parse(savedWrongIds);
+        this.wrongQuestions = ids.map(id => QUESTION_MAP.get(id)).filter(Boolean);
+      }
+
+      // 載入已作答過的題目 ID 集合（優先抽未讀題）
+      const savedSeenIds = localStorage.getItem('g2_baseball_seen_ids');
+      if (savedSeenIds) {
+        this.seenQuestionIds = new Set(JSON.parse(savedSeenIds));
+      }
     } catch {
       this.coins = 40;
       this.unlockedBats = ['wood'];
       this.equippedBat = 'wood';
+      this.playerName = '台灣小巨砲';
+      this.jerseyNumber = '99';
     }
   }
 
@@ -119,6 +148,10 @@ export class GameEngine {
       localStorage.setItem('g2_baseball_coins', String(this.coins));
       localStorage.setItem('g2_baseball_bats', JSON.stringify(this.unlockedBats));
       localStorage.setItem('g2_baseball_equipped', this.equippedBat);
+      localStorage.setItem('g2_baseball_player_name', this.playerName);
+      localStorage.setItem('g2_baseball_jersey_num', String(this.jerseyNumber));
+      localStorage.setItem('g2_baseball_wrong_ids', JSON.stringify(this.wrongQuestions.map(q => q.id)));
+      localStorage.setItem('g2_baseball_seen_ids', JSON.stringify(Array.from(this.seenQuestionIds)));
     } catch {
       // 忽略無痕模式寫入限制
     }
@@ -187,7 +220,8 @@ export class GameEngine {
         options: shuffleArray(q.options)
       }));
     } else {
-      this.questions = getGameQuestions(mode === 'wrong' ? 'all' : mode, 9);
+      this.questions = getGameQuestions(mode === 'wrong' ? 'all' : mode, 9, this.seenQuestionIds);
+      this.savePlayerData();
     }
 
     this.updateScoreboardUI();
@@ -202,6 +236,9 @@ export class GameEngine {
     document.getElementById('hud-score').textContent = this.score;
     document.getElementById('hud-coins').textContent = this.coins;
     document.getElementById('hud-combo').textContent = `COMBO x${this.combo}`;
+
+    const jerseyBadge = document.getElementById('hud-jersey-badge');
+    if (jerseyBadge) jerseyBadge.textContent = `#${this.jerseyNumber}`;
 
     document.getElementById('out-1').classList.toggle('active', this.outs >= 1);
     document.getElementById('out-2').classList.toggle('active', this.outs >= 2);
@@ -226,10 +263,15 @@ export class GameEngine {
     // 更新技能按鈕可用狀態（球探透視卡每局僅限使用一次）
     const btn5050 = document.getElementById('btn-skill-5050');
     const btnFever = document.getElementById('btn-skill-fever');
+    const btnGrid = document.getElementById('btn-toggle-pitchgrid');
     if (btn5050) btn5050.disabled = this.coins < 20 || this.used5050ThisTurn || this.isAnimating;
     if (btnFever) {
       btnFever.disabled = this.coins < 40 || this.isFeverActive || this.isAnimating;
       btnFever.classList.toggle('active-fever', this.isFeverActive);
+    }
+    if (btnGrid) {
+      btnGrid.classList.toggle('active-grid', this.isStrikeZoneGridActive);
+      btnGrid.textContent = this.isStrikeZoneGridActive ? '🎯 九宮格好球帶：開啟中' : '🎯 九宮格好球帶：關閉';
     }
   }
 
@@ -326,9 +368,64 @@ export class GameEngine {
       optionsContainer.appendChild(btn);
     });
 
+    // Phase 2.2：斷尺視覺量測台 (數學第 3 單元)
+    renderRulerWidget(
+      document.getElementById('ruler-widget-container'),
+      q,
+      () => soundCtrl.playPitchSound()
+    );
+
+    // Phase 2.3：兩步驟跑壘連鎖解題 (數學第 4 單元)
+    renderBaseRunningChainWidget(
+      document.getElementById('baserun-chain-container'),
+      q,
+      (step1Val) => {
+        this.coins += 10;
+        if (!this.bases[1]) this.bases[1] = true; // 跑者成功盜上二壘！
+        this.savePlayerData();
+        this.updateScoreboardUI();
+        soundCtrl.playHitSound(false);
+        this.showBigBanner(`🏃‍♂️ 盜上二壘 SAFE! (${step1Val})`, '💰 +10 盜壘獎勵金幣！請揮棒完成第二步！', '#86efac');
+      }
+    );
+
+    // Phase 2.4：球場光與影子互動實驗室 (生活第 2 單元)
+    renderShadowLabWidget(
+      document.getElementById('shadow-lab-container'),
+      q,
+      () => soundCtrl.playPitchSound()
+    );
+
+    // Phase 2.1：好球帶九宮格投球靶心面板
+    this.refreshStrikeZoneGrid();
+
     this.resetPositions();
     this.updateScoreboardUI();
     soundCtrl.speakText(this.getSpokenQuestionText(q));
+  }
+
+  refreshStrikeZoneGrid() {
+    const overlay = document.getElementById('strike-zone-overlay');
+    const gridEl = document.getElementById('strike-zone-grid');
+    const q = this.questions[this.currentQuestionIdx];
+    if (!overlay || !gridEl || !q) return;
+
+    if (!this.isStrikeZoneGridActive) {
+      overlay.classList.add('hidden');
+      return;
+    }
+
+    overlay.classList.remove('hidden');
+    renderStrikeZoneGrid(
+      gridEl,
+      q,
+      this.eliminatedIndices,
+      (opt, optIdx) => this.handleSwing(opt, optIdx),
+      (decoyLabel) => {
+        soundCtrl.playMissSound();
+        this.showBigBanner('⚾ 偏離好球帶 BALL!', `「${decoyLabel}」不在三個主選項中，再瞄準一次！`, '#f97316');
+      }
+    );
   }
 
   resetPositions() {
@@ -364,6 +461,7 @@ export class GameEngine {
     targetBtn.disabled = true;
     targetBtn.classList.add('eliminated-opt');
 
+    this.refreshStrikeZoneGrid();
     soundCtrl.playPitchSound();
     this.updateScoreboardUI();
   }
@@ -430,7 +528,7 @@ export class GameEngine {
     if (this.isAnimating) return;
     this.isAnimating = true;
 
-    const buttons = document.querySelectorAll('.batting-btn');
+    const buttons = document.querySelectorAll('.batting-btn, .sz-plate');
     buttons.forEach(b => b.disabled = true);
 
     soundCtrl.playPitchSound();
@@ -491,6 +589,7 @@ export class GameEngine {
       // 唯有第一次揮棒就直接答對，才從錯題本移除，確保需要教練引導的題目仍可進錯題特訓複習
       if (this.strikesThisTurn === 0) {
         this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
+        this.savePlayerData();
       }
 
       this.updateScoreboardUI();
@@ -539,6 +638,7 @@ export class GameEngine {
 
       if (!this.wrongQuestions.some(wq => wq.id === currentQ.id)) {
         this.wrongQuestions.push(currentQ);
+        this.savePlayerData();
       }
 
       // 第一次答錯：啟動「🧙‍♂️ 總教練引導式教學（擦棒界外球）」，不直接判出局也不直接給答案！
@@ -748,6 +848,7 @@ export class GameEngine {
       }
     });
 
+    this.refreshStrikeZoneGrid();
     this.updateScoreboardUI();
   }
 
@@ -788,17 +889,24 @@ export class GameEngine {
     document.getElementById('final-hr').textContent = this.homeRuns;
     document.getElementById('final-score').textContent = this.score;
 
+    const playerBadge = document.getElementById('final-player-badge');
+    if (playerBadge) {
+      playerBadge.textContent = `👕 選手：${this.playerName} ｜ 背號：#${this.jerseyNumber}`;
+    }
+
     let rankTitle = '🌱 少棒新秀';
     if (this.score >= 12) rankTitle = '👑 期中大聯盟傳奇 MVP';
     else if (this.score >= 7) rankTitle = '🔥 台灣無雙巨砲';
     else if (this.score >= 3) rankTitle = '⚡ 校隊黃金四番';
+    this.lastRankTitle = rankTitle;
+    this.lastAvg = avg;
     document.getElementById('final-rank-title').textContent = `獲得稱號：${rankTitle}（累計金幣：💰${this.coins}）`;
 
     const wrongSummary = document.getElementById('final-wrong-summary');
     const finalWrongBtn = document.getElementById('btn-final-wrong');
 
     if (this.wrongQuestions.length > 0) {
-      wrongSummary.innerHTML = `📋 本場共有 <b style="color:#f87171">${this.wrongQuestions.length} 題</b> 揮空失誤，快進「錯題特訓」把它們全部轟出全壘打！`;
+      wrongSummary.innerHTML = `📋 目前錯題庫共有 <b style="color:#f87171">${this.wrongQuestions.length} 題</b> 待補強，快進「錯題特訓」把它們全部轟出全壘打！`;
       finalWrongBtn.classList.remove('hidden');
     } else {
       wrongSummary.innerHTML = `🎉 <b>完美零失誤擊潰三大魔王！你已經徹底稱霸期中考！</b>`;
@@ -807,7 +915,7 @@ export class GameEngine {
 
     confetti({ particleCount: 160, spread: 110, origin: { y: 0.5 } });
     modal.classList.remove('hidden');
-    soundCtrl.speakText(`比賽結束！你總共攻下 ${this.score} 分，打出 ${this.homeRuns} 支全壘打！`);
+    soundCtrl.speakText(`比賽結束！${this.playerName}選手總共攻下 ${this.score} 分，打出 ${this.homeRuns} 支全壘打！`);
   }
 
   setupEvents() {
@@ -827,6 +935,65 @@ export class GameEngine {
     document.getElementById('btn-close-shop').onclick = () => {
       document.getElementById('shop-modal').classList.add('hidden');
     };
+
+    // 球員姓名與背號設定視窗 (Phase 3)
+    const profileModal = document.getElementById('profile-modal');
+    const openProfileBtn = document.getElementById('btn-open-profile');
+    if (openProfileBtn && profileModal) {
+      openProfileBtn.onclick = () => {
+        document.getElementById('input-player-name').value = this.playerName;
+        document.getElementById('input-jersey-num').value = this.jerseyNumber;
+        profileModal.classList.remove('hidden');
+      };
+      document.getElementById('btn-close-profile').onclick = () => {
+        profileModal.classList.add('hidden');
+      };
+      document.getElementById('btn-save-profile').onclick = () => {
+        const nameVal = document.getElementById('input-player-name').value.trim();
+        const numVal = document.getElementById('input-jersey-num').value.trim();
+        this.playerName = nameVal || '台灣小巨砲';
+        const parsedNum = parseInt(numVal, 10);
+        this.jerseyNumber = !isNaN(parsedNum) && parsedNum >= 0 && parsedNum <= 99 ? String(parsedNum) : '99';
+        this.field.updateBatterJerseyNumber(this.jerseyNumber);
+        this.savePlayerData();
+        this.updateScoreboardUI();
+        profileModal.classList.add('hidden');
+        soundCtrl.playOrganCharge();
+        this.showBigBanner(`👕 ${this.playerName} #${this.jerseyNumber} 登場！`, '專屬 3D 球衣背號已更新！', '#38bdf8');
+      };
+    }
+
+    // 九宮格好球帶切換按鈕 (Phase 2.1)
+    const gridToggleBtn = document.getElementById('btn-toggle-pitchgrid');
+    if (gridToggleBtn) {
+      gridToggleBtn.onclick = () => {
+        this.isStrikeZoneGridActive = !this.isStrikeZoneGridActive;
+        this.refreshStrikeZoneGrid();
+        this.updateScoreboardUI();
+        soundCtrl.playPitchSound();
+      };
+    }
+
+    // 賽後下載專屬 MVP 球員卡 (Phase 3)
+    const downloadCardBtn = document.getElementById('btn-download-card');
+    if (downloadCardBtn) {
+      downloadCardBtn.onclick = () => {
+        const batObj = BAT_SHOP_ITEMS.find(b => b.id === this.equippedBat) || BAT_SHOP_ITEMS[0];
+        const modeSelect = document.getElementById('select-mode');
+        const modeLabel = modeSelect?.selectedOptions?.[0]?.textContent || '綜合大滿貫';
+        generateAndDownloadPlayerCard({
+          playerName: this.playerName,
+          jerseyNumber: this.jerseyNumber,
+          rankTitle: this.lastRankTitle || '🌱 少棒新秀',
+          avg: this.lastAvg || '.000',
+          homeRuns: this.homeRuns,
+          score: this.score,
+          coins: this.coins,
+          batName: batObj.name,
+          modeLabel
+        });
+      };
+    }
 
     document.getElementById('btn-skill-5050').onclick = () => this.useScout5050Skill();
     document.getElementById('btn-skill-fever').onclick = () => this.useFeverSkill();
@@ -853,6 +1020,14 @@ export class GameEngine {
     }
 
     window.addEventListener('keydown', (e) => {
+      const profileModal = document.getElementById('profile-modal');
+      if (profileModal && !profileModal.classList.contains('hidden')) {
+        if (e.key === 'Escape') {
+          profileModal.classList.add('hidden');
+        }
+        return;
+      }
+
       const shopModal = document.getElementById('shop-modal');
       if (!shopModal.classList.contains('hidden')) {
         if (e.key === 'Escape' || e.key === 'Enter') {

@@ -1,0 +1,777 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+  background-color: #090d16;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+@keyframes mcShake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-12px, 8px); }
+  40% { transform: translate(12px, -8px); }
+  60% { transform: translate(-8px, 6px); }
+  80% { transform: translate(8px, -6px); }
+  100% { transform: translate(0, 0); }
+}
+
+.screen-shake {
+  animation: mcShake 0.38s ease-in-out;
+}
+
+/* 麥塊像素風立體方塊邊框共用樣式 */
+.mc-panel {
+  background: rgba(20, 24, 33, 0.94);
+  border-top: 4px solid #64748b;
+  border-left: 4px solid #64748b;
+  border-right: 4px solid #1e293b;
+  border-bottom: 4px solid #1e293b;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.8);
+}
+
+/* 巨型挖礦暴擊橫幅 */
+#big-banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  z-index: 40;
+  text-align: center;
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#banner-main {
+  font-size: 50px;
+  font-weight: 900;
+  color: #4ade80;
+  text-shadow: 4px 4px 0 #064e3b, 0 0 25px #22c55e;
+  white-space: nowrap;
+}
+
+#banner-statcast {
+  display: inline-block;
+  margin-top: 8px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 3px solid #facc15;
+  color: #fef08a;
+  font-size: 17px;
+  font-weight: 900;
+  padding: 5px 16px;
+}
+
+#big-banner.banner-hidden {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2);
+}
+
+/* 頂部麥塊魔王血條與題目看板 */
+#mc-hud-top {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 96%;
+  max-width: 980px;
+  padding: 10px 16px;
+  z-index: 10;
+  color: #fff;
+}
+
+.mc-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 3px solid #334155;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.mc-left-group, .mc-center-group, .mc-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.stage-badge {
+  background: #16a34a;
+  border: 2px solid #86efac;
+  color: #fff;
+  padding: 4px 10px;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.boss-badge {
+  background: #581c87;
+  border: 2px solid #d8b4fe;
+  color: #f3e8ff;
+  padding: 4px 10px;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.dmg-pill, .emerald-pill, .combo-pill {
+  background: #0f172a;
+  border: 2px solid #475569;
+  padding: 3px 10px;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.dmg-pill b { color: #f87171; font-size: 18px; }
+.emerald-pill { border-color: #22c55e; background: rgba(34, 197, 94, 0.14); }
+.emerald-pill b { color: #4ade80; font-size: 18px; }
+.combo-pill { background: #b45309; border-color: #fde047; color: #fef08a; font-size: 12px; }
+
+.hearts-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #0f172a;
+  border: 2px solid #ef4444;
+  padding: 3px 9px;
+  font-size: 16px;
+}
+
+.heart-icon {
+  transition: transform 0.2s;
+}
+
+.heart-icon.lost {
+  filter: grayscale(1) opacity(0.3);
+}
+
+.mc-btn, .mc-select {
+  background: #334155;
+  border-top: 2px solid #94a3b8;
+  border-left: 2px solid #94a3b8;
+  border-right: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+  color: #fff;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.mc-btn:hover { background: #475569; }
+.btn-anvil { background: #15803d; border-color: #86efac #14532d #14532d #86efac; color: #fef08a; }
+.btn-baseball { background: #0284c7; color: #e0f2fe; }
+.btn-print { background: #7e22ce; color: #f3e8ff; }
+.btn-wrong { background: #dc2626; animation: pulseMc 1.4s infinite; }
+
+@keyframes pulseMc {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.hidden { display: none !important; }
+
+.question-box { text-align: center; }
+#hud-subject { font-size: 13px; color: #4ade80; font-weight: 900; margin-bottom: 2px; }
+#hud-question { font-size: 21px; font-weight: 900; color: #fff; line-height: 1.35; }
+.highlight-char {
+  color: #fef08a;
+  background: rgba(22, 163, 74, 0.35);
+  border: 2px solid #4ade80;
+  padding: 0 6px;
+  margin: 0 2px;
+}
+#hud-phonetic { font-size: 13px; color: #fde047; margin-top: 3px; }
+
+.villager-live-banner {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 4px 12px;
+  background: rgba(22, 163, 74, 0.28);
+  border: 2px solid #4ade80;
+  color: #fef08a !important;
+  font-weight: 900;
+  font-size: 14px !important;
+}
+
+/* 紅石活塞方塊量尺 */
+.mc-ruler-box {
+  margin-top: 8px;
+  background: #0f172a;
+  border: 2px solid #ef4444;
+  padding: 8px 14px;
+}
+.mc-ruler-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #fecaca;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mc-piston-btn {
+  background: #dc2626;
+  color: #fef08a;
+  border: 2px solid #fca5a5;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.mc-piston-btn:disabled {
+  background: #16a34a;
+  border-color: #86efac;
+  color: #fff;
+}
+.mc-ruler-stage {
+  position: relative;
+  height: 62px;
+  margin: 4px 12px 0;
+}
+.mc-measured-bar {
+  position: absolute;
+  top: 2px;
+  height: 22px;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: #090d16;
+  z-index: 3;
+}
+.mc-piston-block {
+  position: absolute;
+  top: 4px;
+  height: 22px;
+  background: rgba(250, 204, 21, 0.88);
+  border: 2px solid #ca8a04;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: #0f172a;
+}
+.mc-ruler-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: #4ade80;
+  border-top: 6px solid #16a34a;
+  border-bottom: 4px solid #78350f;
+}
+.mc-ruler-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mc-tick-line { width: 2px; height: 10px; background: #090d16; }
+.mc-tick-num { font-size: 12px; font-weight: 900; color: #090d16; }
+.mc-tick-start { background: #2563eb; color: #fff; padding: 0 5px; }
+.mc-tick-end { background: #dc2626; color: #fff; padding: 0 5px; }
+
+/* 動力鐵軌礦車兩步驟連鎖 */
+.mc-rail-box {
+  margin-top: 8px;
+  background: rgba(120, 53, 15, 0.65);
+  border: 2px solid #facc15;
+  padding: 7px 12px;
+}
+.mc-rail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mc-rail-prompt { font-size: 13px; font-weight: 900; color: #fef08a; }
+.mc-rail-choices { display: flex; gap: 6px; }
+.mc-rail-btn {
+  background: #1e293b;
+  border: 2px solid #facc15;
+  color: #fff;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.mc-rail-btn.rail-correct { background: #16a34a; border-color: #86efac; }
+.mc-rail-btn.rail-wrong { background: #7f1d1d; text-decoration: line-through; opacity: 0.5; }
+.mc-rail-step2 {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed #facc15;
+  color: #86efac;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* 3x3 工作台合成面板 */
+#crafting-overlay {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 92%;
+  max-width: 480px;
+  padding: 12px;
+  z-index: 15;
+}
+.craft-header {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fef08a;
+  margin-bottom: 8px;
+}
+.craft-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.mc-craft-slot {
+  position: relative;
+  background: #334155;
+  border-top: 3px solid #1e293b;
+  border-left: 3px solid #1e293b;
+  border-right: 3px solid #94a3b8;
+  border-bottom: 3px solid #94a3b8;
+  min-height: 54px;
+  padding: 10px 6px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mc-craft-slot:hover:not(:disabled) {
+  background: #475569;
+  border-color: #facc15;
+}
+.slot-num {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  font-size: 10px;
+  color: #cbd5e1;
+  font-weight: 900;
+}
+.slot-label { font-size: 13px; font-weight: 900; text-align: center; }
+.mc-craft-slot.slot-eliminated, .mc-craft-slot.slot-wrong {
+  opacity: 0.25;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.mc-craft-slot.slot-correct { background: #16a34a; }
+
+/* 底部麥塊快捷列 Hotbar + 紅石充能槽 + 三座礦脈按鈕 */
+#mining-controls {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 900px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hotbar-left {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hotbar-btn {
+  background: #1e293b;
+  border: 3px solid #64748b;
+  color: #f8fafc;
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.hotbar-btn:hover:not(:disabled) {
+  border-color: #facc15;
+  background: #334155;
+}
+
+.hotbar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.hotbar-tnt { border-color: #ef4444; background: rgba(153, 27, 27, 0.85); color: #fef08a; }
+.hotbar-tnt.active-tnt { background: #dc2626; box-shadow: 0 0 18px #ef4444; animation: pulseMc 0.8s infinite; }
+.hotbar-craft.active-craft { background: #7e22ce; border-color: #fef08a; }
+
+.equipped-tool-tag {
+  background: #0f172a;
+  border: 2px solid #4ade80;
+  color: #4ade80;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.redstone-bar-wrapper {
+  padding: 5px 12px;
+}
+
+.redstone-label {
+  font-size: 12px;
+  color: #fca5a5;
+  text-align: center;
+  margin-bottom: 3px;
+  font-weight: 900;
+}
+
+.redstone-track {
+  position: relative;
+  height: 20px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.6fr 1fr 1.2fr;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  text-align: center;
+  line-height: 20px;
+  border: 2px solid #090d16;
+}
+
+.rs-normal { background: #475569; }
+.rs-power { background: #d97706; }
+.rs-crit { background: #dc2626; color: #fef08a; }
+
+#redstone-cursor {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 50%;
+  width: 8px;
+  background: #4ade80;
+  border: 2px solid #000;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+#options-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ore-btn {
+  background: #334155;
+  border-top: 4px solid #94a3b8;
+  border-left: 4px solid #94a3b8;
+  border-right: 4px solid #0f172a;
+  border-bottom: 4px solid #0f172a;
+  color: #fff;
+  padding: 12px 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.12s;
+}
+
+.ore-btn:hover:not(:disabled) {
+  transform: translateY(-4px);
+  border-color: #4ade80;
+  background: #1e293b;
+}
+
+.ore-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ore-btn.eliminated-opt { opacity: 0.22; text-decoration: line-through; }
+
+.ore-zone {
+  font-size: 12px;
+  color: #4ade80;
+  background: rgba(15, 23, 42, 0.75);
+  padding: 2px 10px;
+  font-weight: 900;
+}
+
+.ore-text {
+  font-size: 17px;
+  font-weight: 900;
+  color: #f8fafc;
+  text-align: center;
+}
+
+/* 彈窗與村民引導視窗 */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-card {
+  width: 92%;
+  max-width: 540px;
+  padding: 22px 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.shop-item {
+  background: #1e293b;
+  border: 3px solid #475569;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-item.equipped {
+  border-color: #4ade80;
+  background: rgba(22, 163, 74, 0.18);
+}
+
+.shop-item-title { font-size: 16px; font-weight: 900; color: #fef08a; }
+.shop-item-desc { font-size: 12px; color: #cbd5e1; line-height: 1.35; }
+.shop-buy-btn {
+  background: #22c55e;
+  color: #090d16;
+  border: none;
+  padding: 6px 16px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.shop-buy-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+
+.modal-title { font-size: 24px; font-weight: 900; margin-bottom: 12px; }
+.modal-msg {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  margin-bottom: 16px;
+  text-align: left;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 14px;
+  border: 2px solid #334155;
+}
+
+.action-btn {
+  background: #22c55e;
+  color: #090d16;
+  border-top: 3px solid #86efac;
+  border-left: 3px solid #86efac;
+  border-right: 3px solid #14532d;
+  border-bottom: 3px solid #14532d;
+  font-size: 16px;
+  font-weight: 900;
+  padding: 10px 22px;
+  cursor: pointer;
+}
+
+.guide-step-card { padding: 10px 12px; margin-bottom: 10px; font-size: 15px; line-height: 1.55; }
+.guide-step-trap { background: rgba(239, 68, 68, 0.18); border-left: 4px solid #ef4444; color: #fecaca; }
+.guide-step-think { background: rgba(34, 197, 94, 0.18); border-left: 4px solid #4ade80; color: #dcfce7; }
+.guide-step-scaffold { background: rgba(250, 204, 21, 0.16); border: 2px dashed #facc15; color: #fef08a; margin-top: 8px; }
+
+.btn-reveal-clue {
+  width: 100%;
+  background: #0284c7;
+  color: #fff;
+  border: 2px solid #7dd3fc;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mvp-stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 14px 0;
+  background: #0f172a;
+  padding: 12px;
+  border: 2px solid #4ade80;
+}
+.stat-item { display: flex; flex-direction: column; gap: 4px; }
+.stat-label { font-size: 13px; color: #94a3b8; }
+.stat-val { font-size: 24px; font-weight: 900; color: #facc15; }
+
+.profile-form { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: #0f172a; }
+.profile-label { display: flex; justify-content: space-between; align-items: center; font-weight: 900; }
+.profile-input {
+  background: #1e293b;
+  border: 2px solid #4ade80;
+  color: #fef08a;
+  padding: 6px 10px;
+  font-size: 16px;
+  font-weight: 900;
+  width: 170px;
+  text-align: center;
+}
+
+/* ================= 麥塊方塊日晷與紅石光影實驗台 (生活第2單元) ================= */
+.mc-shadow-box {
+  margin-top: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #facc15;
+  padding: 8px 10px;
+}
+
+.mc-shadow-header {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: #fef08a;
+  margin-bottom: 6px;
+}
+
+.mc-shadow-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mc-shadow-btn {
+  background: #334155;
+  border: 2px solid #64748b;
+  color: #f8fafc;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mc-shadow-btn:hover,
+.mc-shadow-btn.active {
+  background: #22c55e;
+  border-color: #fef08a;
+  color: #090d16;
+}
+
+.mc-shadow-stage {
+  position: relative;
+  height: 76px;
+  background: linear-gradient(180deg, #1e3a8a 0%, #15803d 70%, #14532d 100%);
+  border: 2px solid #475569;
+  overflow: hidden;
+}
+
+.mc-compass {
+  position: absolute;
+  top: 5px;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 1px 6px;
+  background: #090d16;
+  color: #fef08a;
+}
+
+.mc-east { left: 8px; border: 1.5px solid #f97316; }
+.mc-west { right: 8px; border: 1.5px solid #38bdf8; }
+
+.mc-light-icon {
+  position: absolute;
+  font-size: 20px;
+  transform: translateX(-50%);
+  transition: all 0.25s ease;
+}
+
+.mc-caster-hero {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #06b6d4;
+  color: #090d16;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border: 2px solid #f8fafc;
+  z-index: 2;
+}
+
+.mc-casted-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  height: 11px;
+  background: rgba(9, 13, 22, 0.85);
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  z-index: 1;
+}
+
+.mc-shadow-note {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fef08a;
+  background: rgba(9, 13, 22, 0.72);
+  padding: 1px 6px;
+}
+
+@media (max-width: 680px) {
+  #hud-question { font-size: 17px; }
+  .ore-text { font-size: 14px; }
+  #banner-main { font-size: 30px; }
+  .shop-grid { grid-template-columns: 1fr; }
+}
