@@ -11,6 +11,7 @@ import confetti from 'canvas-confetti';
 import { getGameQuestions, shuffleArray } from './curriculum.js';
 import { BaseballField } from './baseballField.js';
 import { soundCtrl } from './audio.js';
+import { buildGuidedCoachingData } from './guidedTeaching.js';
 
 const PITCH_TYPES = [
   { name: '🔥 152km 火焰直球', speed: 32, curve: 0 },
@@ -71,6 +72,10 @@ export class GameEngine {
     this.bases = [false, false, false];
     this.isFeverActive = false;
     this.used5050ThisTurn = false;
+    this.strikesThisTurn = 0;
+    this.eliminatedIndices = new Set();
+    this.isGuidedRetryPending = false;
+    this.lastGuideData = null;
 
     this.isAnimating = false;
     this.clock = new THREE.Clock();
@@ -243,8 +248,8 @@ export class GameEngine {
   getSpokenQuestionText(q) {
     if (!q) return '';
     // 多音字題型避免語音引擎直接把答案讀音念出來洩題
-    if (q.unit && q.unit.includes('多音字')) {
-      return `${q.subject}，${q.unit}。請看螢幕上的句子，選出重點框裡國字的正確注音！`;
+    if ((q.unit && q.unit.includes('多音字')) || (q.question && q.question.includes('讀音'))) {
+      return `${q.subject}，${q.unit}。請看螢幕上的句子，選出重點框裡國字的正確讀音！`;
     }
     const cleanQuestion = q.question.replace(/\[([^\]]+)\]/g, '$1');
     return `${q.subject}，${cleanQuestion}`;
@@ -280,6 +285,10 @@ export class GameEngine {
 
     this.currentQuestionIdx = idx;
     this.used5050ThisTurn = false;
+    this.strikesThisTurn = 0;
+    this.eliminatedIndices = new Set();
+    this.isGuidedRetryPending = false;
+    this.lastGuideData = null;
     const q = this.questions[idx];
 
     // 依局數切換魔王投手與日/昏/夜球場天色 (0~2局:暴熊, 3~5局:忍蛙, 6~8局:巨龍)
@@ -294,7 +303,9 @@ export class GameEngine {
 
     document.getElementById('hud-subject').textContent = `【${q.subject}】${q.unit}`;
     document.getElementById('hud-question').innerHTML = this.formatQuestionHTML(q.question);
-    document.getElementById('hud-phonetic').textContent = q.phonetic || '';
+    const phoneticEl = document.getElementById('hud-phonetic');
+    phoneticEl.textContent = q.phonetic || '';
+    phoneticEl.className = '';
     document.getElementById('hud-inning').textContent = `${idx + 1}局上`;
 
     const optionsContainer = document.getElementById('options-container');
@@ -348,6 +359,8 @@ export class GameEngine {
     this.savePlayerData();
 
     const targetBtn = wrongBtns[Math.floor(Math.random() * wrongBtns.length)];
+    const targetIdx = Number(targetBtn.dataset.idx);
+    this.eliminatedIndices.add(targetIdx);
     targetBtn.disabled = true;
     targetBtn.classList.add('eliminated-opt');
 
@@ -475,7 +488,10 @@ export class GameEngine {
       }
 
       this.isFeverActive = false;
-      this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
+      // 唯有第一次揮棒就直接答對，才從錯題本移除，確保需要教練引導的題目仍可進錯題特訓複習
+      if (this.strikesThisTurn === 0) {
+        this.wrongQuestions = this.wrongQuestions.filter(wq => wq.id !== currentQ.id);
+      }
 
       this.updateScoreboardUI();
       soundCtrl.playHitSound(isHR);
@@ -502,24 +518,55 @@ export class GameEngine {
         confetti({ particleCount: 95, spread: 85, origin: { y: 0.55 } });
       }
 
+      const wasGuidedSuccess = this.strikesThisTurn > 0;
       this.animateHitBallFlight(zoneIdx, hitBases, () => {
-        const extraMsg = `<br>📏 <b>飛行距離：${distMeters}m（初速 ${exitVel}km/h）</b><br>💰 <b>獲得賞金：+${earnedCoins} 金幣！</b>（連擊 COMBO x${this.combo}）`;
+        const guidedPraise = wasGuidedSuccess
+          ? `<div class="guide-step-card guide-step-think" style="margin-top:8px;">🌟 <b>引導破解成功！</b>你順著教練的思考步驟，靠自己找出正確答案了！<br>🎓 <b>完整觀念總結</b>：${this.escapeHTML(currentQ.hint)}</div>`
+          : `<div style="margin-top:6px;color:#93c5fd;">🎓 <b>觀念解析</b>：${this.escapeHTML(currentQ.hint)}</div>`;
+        const extraMsg = `<br>📏 <b>飛行距離：${distMeters}m（初速 ${exitVel}km/h）</b><br>💰 <b>獲得賞金：+${earnedCoins} 金幣！</b>（連擊 COMBO x${this.combo}）${guidedPraise}`;
         this.showFeedbackModal(
           true,
           `<b>${bannerText}</b><br>${option.hitResult}${extraMsg}`,
-          isHR ? `全壘打！飛行距離 ${distMeters} 公尺！` : `漂亮安打！`
+          wasGuidedSuccess
+            ? `太棒了！經過教練引導，你自己找出正確答案了！${currentQ.hint}`
+            : isHR ? `全壘打！飛行距離 ${distMeters} 公尺！` : `漂亮安打！`
         );
       });
 
     } else {
       soundCtrl.playMissSound();
-      this.combo = 0;
-      this.outs++;
-      this.isFeverActive = false;
+      this.strikesThisTurn++;
 
       if (!this.wrongQuestions.some(wq => wq.id === currentQ.id)) {
         this.wrongQuestions.push(currentQ);
       }
+
+      // 第一次答錯：啟動「🧙‍♂️ 總教練引導式教學（擦棒界外球）」，不直接判出局也不直接給答案！
+      if (this.strikesThisTurn === 1) {
+        // 若尚未因球探卡刪去選項，則將剛才誤選的錯誤選項劃掉，留下 2 個選項讓學童思考
+        if (this.eliminatedIndices.size === 0) {
+          this.eliminatedIndices.add(zoneIdx);
+        }
+        this.used5050ThisTurn = true; // 進入引導階段後鎖定球探卡，鼓勵學童親自推導
+        this.isGuidedRetryPending = true;
+
+        const guideData = buildGuidedCoachingData(currentQ, option);
+        this.lastGuideData = guideData;
+
+        this.showBigBanner('⚾ 擦棒界外球 FOUL! 教練戰術引導', '別氣餒！聽完教練引導再揮一棒！', '#38bdf8');
+        this.updateScoreboardUI();
+
+        this.feedbackTimer = setTimeout(() => {
+          this.showGuidedCoachingModal(guideData);
+        }, 520);
+        return;
+      }
+
+      // 第二次仍答錯：正式三振出局，顯示完整解析並請學童確認正確答案
+      this.combo = 0;
+      this.outs++;
+      this.isFeverActive = false;
+      this.isGuidedRetryPending = false;
 
       let outNotice = '';
       if (this.outs >= 3) {
@@ -532,12 +579,17 @@ export class GameEngine {
       }
 
       this.updateScoreboardUI();
+      const correctOpt = currentQ.options.find(o => o.isCorrect);
+      const correctText = correctOpt ? correctOpt.text : '';
 
       this.feedbackTimer = setTimeout(() => {
         this.showFeedbackModal(
           false,
-          `${option.hitResult}<br><br>💡 <b>總教練戰術指導</b>：<br>${currentQ.hint}${outNotice}`,
-          `出局！教練提醒你，${currentQ.hint}`
+          `<div class="guide-step-card guide-step-trap"><b>🔍 錯失好球原因</b>：${this.escapeHTML(option.hitResult)}</div>` +
+          `<div class="guide-step-card guide-step-think">💡 <b>總教練完整解析</b>：<br>${this.escapeHTML(currentQ.hint)}</div>` +
+          `<div class="guide-step-card guide-step-scaffold">✅ <b>正確答案是：【${this.escapeHTML(correctText)}】</b>${outNotice}</div>`,
+          `出局！教練告訴你，${currentQ.hint} 正確答案是 ${correctText}`,
+          `✅ 我學會了！正確答案是【${correctText}】⚾`
         );
       }, 550);
     }
@@ -625,22 +677,107 @@ export class GameEngine {
     document.getElementById('shop-modal').classList.remove('hidden');
   }
 
-  showFeedbackModal(isSuccess, messageHtml, speechText) {
+  // 呈現「🧙‍♂️ 總教練引導式教學」三步鷹架視窗（不直接洩漏答案，引導學童重試找出答案）
+  showGuidedCoachingModal(guideData) {
     const modal = document.getElementById('feedback-modal');
     const title = document.getElementById('feedback-title');
     const msg = document.getElementById('feedback-msg');
+    const nextBtn = document.getElementById('btn-next');
 
-    title.textContent = isSuccess ? '💥 精采好球 NICE HIT！' : '⚡ 出局 OUT！戰術暫停';
+    title.textContent = '🧙‍♂️ 總教練引導教學（界外球戰術暫停）';
+    title.style.color = '#38bdf8';
+
+    msg.innerHTML = `
+      <div class="guide-step-card guide-step-trap">
+        <b>🔍 步驟一：為什麼剛剛這球揮空了？（你選了：${this.escapeHTML(guideData.selectedWrongText)}）</b><br>
+        ${this.escapeHTML(guideData.trapReason)}
+      </div>
+      <div class="guide-step-card guide-step-think">
+        <b>🧭 步驟二：總教練帶你一步一步想</b><br>
+        ${this.escapeHTML(guideData.step1Question)}
+      </div>
+      <button type="button" class="btn-reveal-clue" id="btn-reveal-scaffold">
+        💡 還是不太確定？點我打開「解題算式／觀念小錦囊」
+      </button>
+      <div class="guide-step-card guide-step-scaffold hidden" id="scaffold-secret-box">
+        <b>🔑 步驟三：解題拆解小錦囊（想想看【 ❓ 】是多少？）</b><br>
+        ${this.escapeHTML(guideData.step2MaskedHint)}
+      </div>
+    `;
+
+    nextBtn.textContent = '🎯 我想通了！回打擊區自己選出答案 ⚾ (空白鍵)';
+    modal.classList.remove('hidden');
+
+    const revealBtn = document.getElementById('btn-reveal-scaffold');
+    const secretBox = document.getElementById('scaffold-secret-box');
+    if (revealBtn && secretBox) {
+      revealBtn.onclick = () => {
+        secretBox.classList.remove('hidden');
+        revealBtn.classList.add('hidden');
+        const spokenScaffold = guideData.step2MaskedHint.replace(/【\s*❓\s*】|❓/g, '多少');
+        soundCtrl.speakText(`解題小錦囊：${spokenScaffold} 請回打擊區選出正確答案！`);
+      };
+    }
+
+    soundCtrl.speakText(guideData.spokenGuide);
+  }
+
+  // 引導教學後回到同一題打擊區，讓學童根據線索自己找出正確答案
+  retryCurrentQuestion() {
+    document.getElementById('feedback-modal').classList.add('hidden');
+    this.isAnimating = false;
+    this.isGuidedRetryPending = false;
+
+    this.resetPositions();
+
+    // 在題目下方持續顯示教練的遮罩引導線索，陪伴學童作答
+    if (this.lastGuideData) {
+      const phoneticEl = document.getElementById('hud-phonetic');
+      phoneticEl.textContent = this.lastGuideData.liveHudGuide;
+      phoneticEl.className = 'coach-live-banner';
+    }
+
+    // 重新啟用尚未被淘汰的揮棒選項按鈕
+    const buttons = document.querySelectorAll('.batting-btn');
+    buttons.forEach((btn, idx) => {
+      if (this.eliminatedIndices.has(idx)) {
+        btn.disabled = true;
+        btn.classList.add('eliminated-opt');
+      } else {
+        btn.disabled = false;
+      }
+    });
+
+    this.updateScoreboardUI();
+  }
+
+  showFeedbackModal(isSuccess, messageHtml, speechText, customBtnText = '') {
+    const modal = document.getElementById('feedback-modal');
+    const title = document.getElementById('feedback-title');
+    const msg = document.getElementById('feedback-msg');
+    const nextBtn = document.getElementById('btn-next');
+
+    title.textContent = isSuccess ? '💥 精采好球 NICE HIT！' : '⚡ 出局 OUT！觀念訂正時間';
     title.style.color = isSuccess ? '#facc15' : '#ef4444';
     msg.innerHTML = messageHtml;
+    nextBtn.textContent = customBtnText || '下一打席 ⚾ (空白鍵)';
     modal.classList.remove('hidden');
 
     soundCtrl.speakText(speechText);
   }
 
+  handleFeedbackModalAction() {
+    if (this.isGuidedRetryPending) {
+      this.retryCurrentQuestion();
+    } else {
+      this.nextQuestion();
+    }
+  }
+
   nextQuestion() {
     document.getElementById('feedback-modal').classList.add('hidden');
     this.isAnimating = false;
+    this.isGuidedRetryPending = false;
     this.loadQuestion(this.currentQuestionIdx + 1);
   }
 
@@ -694,7 +831,7 @@ export class GameEngine {
     document.getElementById('btn-skill-5050').onclick = () => this.useScout5050Skill();
     document.getElementById('btn-skill-fever').onclick = () => this.useFeverSkill();
 
-    document.getElementById('btn-next').onclick = () => this.nextQuestion();
+    document.getElementById('btn-next').onclick = () => this.handleFeedbackModalAction();
     document.getElementById('btn-restart').onclick = () => {
       this.startNewGame(this.currentMode === 'wrong' ? 'all' : this.currentMode);
     };
@@ -730,7 +867,7 @@ export class GameEngine {
       if (!feedbackModal.classList.contains('hidden')) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          this.nextQuestion();
+          this.handleFeedbackModalAction();
         }
         return;
       }
