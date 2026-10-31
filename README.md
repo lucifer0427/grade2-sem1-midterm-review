@@ -16,7 +16,7 @@
 
 ## 🚀 雙版本核心功能亮點（紀錄獨立計算）
 
-### ⚾ 版本一：3D 實況滿貫王 4.0（`index.html`）
+### ⚾ 版本一：3D 實況滿貫王 5.0（`index.html`）
 1. **3D 實況棒球場與三大魔王階段**：
    - 依局數推進動態切換「晴空白晝（暴熊隊長）$\rightarrow$ 魔幻夕陽（閃電忍蛙）$\rightarrow$ 大聯盟星光夜賽（黃金巨龍）」。
    - 獨立金幣錢包（`g2_baseball_coins`）、4 把 3D 特效神兵球棒、球探透視刪去卡、巨砲必殺覺醒與 Statcast 飛行距離測速。
@@ -49,7 +49,12 @@
 
 ```text
 grade2-sem1-midterm-review/
-├── index.html                  # [棒球版] 3D 實況滿貫王 4.0 遊戲主入口
+├── README.md
+├── AGENTS.md
+├── DEVELOPMENT_PLAN.md
+├── MINECRAFT_PLAN.md
+├── IMPROVEMENT_PLAN.md         # 專案工程改善與健全化維護計畫
+├── index.html                  # [棒球版] 3D 實況滿貫王 5.0 遊戲主入口
 ├── minecraft.html              # [麥塊版] 3D 麥塊大冒險・終界屠龍篇主入口
 ├── print-exam.html             # A4 紙本模擬考卷、雙版本錯題卷與弱點雷達分析器
 ├── manifest.json               # PWA 應用程式清單設定
@@ -66,6 +71,7 @@ grade2-sem1-midterm-review/
 │   ├── minecraftWorld.js       # [麥塊版] Three.js 3D Voxel 引擎、三維度地景與三階段 Boss
 │   ├── minecraftSpecialModes.js# [麥塊版] 紅石活塞斷尺、礦車連鎖、麥塊日晷光影台、3x3 合成台與英雄卡
 │   ├── minecraftAudio.js       # [麥塊版] 挖礦、苦力怕嘶嘶聲、TNT 爆炸與升級音效合成器
+│   ├── gameplayUpgrades.js     # [共用] 5.0 爽感升級模組 (揮棒/挖礦QTE、肉鴿天賦、飛天靶心、3D盲盒與建築)
 │   ├── curriculum.js           # [共用] 150 題題庫匯總、18 種專項篩選與未讀優先抽題池
 │   ├── guidedTeaching.js       # [共用] 蘇格拉底三階段引導教學與答案自動遮罩引擎
 │   └── questions/

@@ -1,5 +1,5 @@
 /**
- * 3D 實況滿貫王 3.0 傳奇魔王篇：主遊戲引擎
+ * 3D 實況滿貫王 5.0 傳奇魔王篇：主遊戲引擎
  * 包含：
  * - 3 大魔王投手與日/昏/夜動態球場
  * - 金幣與 4 把 3D 神兵球棒商店 (LocalStorage 自動存檔)
@@ -28,6 +28,12 @@ import {
   renderFloatingTargetsOverlay,
   openPetAndBuildModal
 } from './gameplayUpgrades.js';
+import {
+  advanceRunners as logicAdvanceRunners,
+  evaluateHitBases as logicEvaluateHitBases,
+  calculateBaseballCoins,
+  escapeHTML as logicEscapeHTML
+} from './gameLogic.js';
 
 const PITCH_TYPES = [
   { name: '🔥 152km 火焰直球', speed: 32, curve: 0 },
@@ -223,6 +229,7 @@ export class GameEngine {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   }
 
   clearTimers() {
@@ -416,10 +423,7 @@ export class GameEngine {
   }
 
   escapeHTML(rawText) {
-    return String(rawText)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    return logicEscapeHTML(rawText);
   }
 
   formatQuestionHTML(rawText) {
@@ -686,39 +690,11 @@ export class GameEngine {
     if (this.isFeverActive || this.equippedBat === 'rainbow') {
       return 4; // 必出全壘打！
     }
-
-    const distFromCenter = Math.abs(this.powerPos - 0.5);
-    const sweetSpotRadius = this.equippedBat === 'thunder' ? 0.22 : 0.14;
-
-    if (distFromCenter <= sweetSpotRadius || this.combo >= 2) {
-      return 4; // HOME RUN
-    } else if (distFromCenter <= 0.28 || this.equippedBat === 'dragon' || this.equippedPet === 'minidragon') {
-      return 2; // DOUBLE 二壘打
-    }
-    return 1; // SINGLE 一壘打
+    return logicEvaluateHitBases(this.powerPos, this.combo, this.equippedBat, this.equippedPet);
   }
 
   advanceRunners(hitBases) {
-    let runsScored = 0;
-    const newBases = [false, false, false];
-
-    for (let i = 2; i >= 0; i--) {
-      if (this.bases[i]) {
-        const destBase = i + hitBases;
-        if (destBase >= 3) {
-          runsScored++;
-        } else {
-          newBases[destBase] = true;
-        }
-      }
-    }
-
-    if (hitBases >= 4) {
-      runsScored++;
-    } else {
-      newBases[hitBases - 1] = true;
-    }
-
+    const { newBases, runsScored } = logicAdvanceRunners(this.bases, hitBases);
     this.bases = newBases;
     this.score += runsScored;
     return runsScored;
@@ -791,21 +767,25 @@ export class GameEngine {
           const scoreBeforeHit = this.score;
           const rbi = this.advanceRunners(hitBases);
 
-          // 計算金幣獎勵 (基礎 + QTE手動加成 + 球棒 + 3D寵物 + 3D球場擴建設施 + 亂入事件 + 磁鐵天賦)
-          let earnedCoins = (isHR ? (wasBasesLoaded ? 80 : 40) : hitBases === 2 ? 25 : 15) + qteResult.bonusCoins;
-          if (this.equippedBat === 'dragon') earnedCoins += 15;
-          if (petObj) earnedCoins += petObj.bonusCoins;
-
           let buildBonus = 0;
           BASEBALL_STADIUM_BUILDS.forEach(b => {
             if (this.unlockedBuilds.includes(b.id)) buildBonus += b.bonusCoins;
           });
-          earnedCoins += buildBonus;
 
-          if (this.blitzSecondsLeft > 0) earnedCoins += 35;
-          if (this.currentEncounter?.coinMultiplier > 1) earnedCoins *= this.currentEncounter.coinMultiplier;
-          if (this.equippedBat === 'rainbow') earnedCoins *= 2;
-          if (this.roguelikeBuffs.has('coin_magnet')) earnedCoins *= 2;
+          // 計算金幣獎勵 (基礎 + QTE手動加成 + 球棒 + 3D寵物 + 3D球場擴建設施 + 亂入事件 + 磁鐵天賦)
+          let earnedCoins = calculateBaseballCoins({
+            isHR,
+            wasBasesLoaded,
+            hitBases,
+            qteBonus: qteResult.bonusCoins,
+            isDragonBat: this.equippedBat === 'dragon',
+            petBonus: petObj?.bonusCoins || 0,
+            buildBonus,
+            blitzBonus: this.blitzSecondsLeft > 0 ? 35 : 0,
+            encounterMultiplier: this.currentEncounter?.coinMultiplier || 1,
+            isRainbowBat: this.equippedBat === 'rainbow',
+            hasCoinMagnet: this.roguelikeBuffs.has('coin_magnet')
+          });
 
           this.coins += earnedCoins;
           this.savePlayerData();

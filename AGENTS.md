@@ -44,6 +44,7 @@ grade2-sem1-midterm-review/
 ├── AGENTS.md
 ├── DEVELOPMENT_PLAN.md
 ├── MINECRAFT_PLAN.md           # 麥塊體素版架構與獨立紀錄規劃文件
+├── IMPROVEMENT_PLAN.md         # 專案工程改善與健全化維護計畫
 ├── index.html                  # [棒球版] 3D 實況棒球複習遊戲主頁面 (g2_baseball_*)
 ├── minecraft.html              # [麥塊版] 3D 麥塊體素複習遊戲主頁面 (g2_mc_*)
 ├── print-exam.html             # A4 紙本考卷動態組卷、列印器與弱點單元雷達分析儀
@@ -61,6 +62,7 @@ grade2-sem1-midterm-review/
 │   ├── minecraftWorld.js       # [麥塊版] Three.js 3D Voxel 引擎與三維度 Boss
 │   ├── minecraftSpecialModes.js# [麥塊版] 紅石活塞斷尺、礦車連鎖、麥塊日晷光影台、3x3 合成台與英雄卡匯出
 │   ├── minecraftAudio.js       # [麥塊版] 麥塊合成音效與語音朗讀
+│   ├── gameplayUpgrades.js     # [共用] 5.0 爽感升級模組 (揮棒/挖礦QTE、肉鴿天賦、飛天靶心、3D盲盒與建築)
 │   ├── curriculum.js           # [共用] 150 題題庫匯總、18 種單元篩選與未讀優先抽題
 │   ├── guidedTeaching.js       # [共用] 蘇格拉底三階段引導式教學模組
 │   └── questions/

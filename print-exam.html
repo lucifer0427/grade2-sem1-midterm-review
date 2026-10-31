@@ -441,7 +441,9 @@
 
     function renderPaper() {
       const listEl = document.getElementById('questions-list');
-      const ptsPerQ = Math.round(100 / Math.max(1, currentPaper.length));
+      const n = Math.max(1, currentPaper.length);
+      const basePts = Math.floor(100 / n);
+      const remainder = 100 - basePts * n;
       listEl.innerHTML = '';
 
       currentPaper.forEach((q, idx) => {
@@ -449,13 +451,14 @@
         const ansNum = correctIdx + 1;
         const correctOpt = q.options[correctIdx];
         const ansDisplay = showAnswers ? `<b style="color:#dc2626;">${ansNum}</b>` : '　';
+        const pts = idx < remainder ? basePts + 1 : basePts;
 
         const item = document.createElement('div');
         item.className = 'question-item';
         item.innerHTML = `
           <div class="q-stem">
             （${ansDisplay}）${idx + 1}. <span class="q-unit-tag">${escapeHTML(q.subject)}・${escapeHTML(q.unit)}</span>
-            ${formatStem(q.question)} <span style="font-size:13px;color:#64748b;">(${ptsPerQ}分)</span>
+            ${formatStem(q.question)} <span style="font-size:13px;color:#64748b;">(${pts}分)</span>
           </div>
           ${q.phonetic ? `<div class="q-phonetic">💡 提示／注音：${escapeHTML(q.phonetic)}</div>` : ''}
           <div class="q-options">

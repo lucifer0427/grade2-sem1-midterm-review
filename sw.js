@@ -17,11 +17,14 @@ const CORE_ASSETS = [
   './js/minecraftSpecialModes.js',
   './js/minecraftAudio.js',
   './js/gameplayUpgrades.js',
+  './js/gameLogic.js',
   './js/curriculum.js',
   './js/guidedTeaching.js',
   './js/questions/chinese.js',
   './js/questions/math.js',
-  './js/questions/life.js'
+  './js/questions/life.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

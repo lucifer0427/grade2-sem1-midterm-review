@@ -18,6 +18,12 @@ import {
 import { buildGuidedCoachingData } from '../js/guidedTeaching.js';
 import * as specialModes from '../js/specialModes.js';
 import * as mcSpecialModes from '../js/minecraftSpecialModes.js';
+import {
+  advanceRunners as testAdvanceRunners,
+  evaluateHitBases as testEvaluateHitBases,
+  calculateBaseballCoins as testCalculateBaseballCoins,
+  escapeHTML as testEscapeHTML
+} from '../js/gameLogic.js';
 
 console.log('⚾⛏️ 開始執行雙版本（棒球版 & 麥塊版）150 題庫結構、答案唯一性與引導教學遮罩率自動化檢測...\n');
 
@@ -26,7 +32,7 @@ assert.equal(CHINESE_QUESTIONS.length, 50, '康軒國語題庫必須剛好 50 �
 assert.equal(MATH_QUESTIONS.length, 50, '翰林數學題庫必須剛好 50 題');
 assert.equal(LIFE_QUESTIONS.length, 50, '生活課程題庫必須剛好 50 題');
 assert.equal(ALL_QUESTIONS.length, 150, '總題庫必須剛好 150 題');
-console.log('✅ [1/6] 題數檢驗通過：國語 50 題 + 數學 50 題 + 生活 50 題 = 150 題');
+console.log('✅ [1/7] 題數檢驗通過：國語 50 題 + 數學 50 題 + 生活 50 題 = 150 題');
 
 // 2. ID 唯一性與選項結構檢測
 const seenIds = new Set();
@@ -45,7 +51,7 @@ for (const q of ALL_QUESTIONS) {
   const optTexts = new Set(q.options.map(o => o.text.trim()));
   assert.equal(optTexts.size, 3, `${q.id} 出現重複的選項文字`);
 }
-console.log('✅ [2/6] 150 題 ID 唯一性、3 選項格式與單一正解檢驗 100% 通過');
+console.log('✅ [2/7] 150 題 ID 唯一性、3 選項格式與單一正解檢驗 100% 通過');
 
 // 3. 多音字防洩題檢驗
 const polyQuestions = CHINESE_QUESTIONS.filter(q => q.question.includes('讀音'));
@@ -61,7 +67,7 @@ for (const q of polyQuestions) {
     `${q.id} 多音字題 phonetic 欄位洩漏了正確讀音「${bopomofo}」`
   );
 }
-console.log(`✅ [3/6] 多音字題型 (${polyQuestions.length} 題) 注音防洩題遮罩檢驗通過`);
+console.log(`✅ [3/7] 多音字題型 (${polyQuestions.length} 題) 注音防洩題遮罩檢驗通過`);
 
 // 4. 蘇格拉底引導教學遮罩率與防假陽性檢測
 let maskedPassCount = 0;
@@ -101,7 +107,7 @@ for (const chk of strictMaskChecks) {
     );
   }
 }
-console.log(`✅ [4/6] 蘇格拉底三階段引導教學 (${maskedPassCount}/150 題) 答案遮罩率與複合題防洩題 100% 通過`);
+console.log(`✅ [4/7] 蘇格拉底三階段引導教學 (${maskedPassCount}/150 題) 答案遮罩率與複合題防洩題 100% 通過`);
 
 // 5. 專項篩選器與未讀優先抽題池檢測
 const filterModes = [
@@ -120,7 +126,7 @@ for (let round = 0; round < 16; round++) {
   getGameQuestions('all', 9, tracker);
 }
 assert.equal(tracker.size, 144, '連續 16 場 (144 題) 未讀優先抽題必須不重複覆蓋 144 題');
-console.log('✅ [5/6] 18 種專項篩選模式與未讀優先智慧抽題演算法檢驗通過');
+console.log('✅ [5/7] 18 種專項篩選模式與未讀優先智慧抽題演算法檢驗通過');
 
 // 6. 雙版本特殊互動模組匯出介面檢測
 assert.equal(typeof specialModes.renderRulerWidget, 'function', '棒球版缺少 renderRulerWidget');
@@ -135,6 +141,36 @@ assert.equal(typeof mcSpecialModes.renderMcShadowLabWidget, 'function', '麥塊�
 assert.equal(typeof mcSpecialModes.renderCraftingTableGrid, 'function', '麥塊版缺少 renderCraftingTableGrid');
 assert.equal(typeof mcSpecialModes.generateAndDownloadMinecraftCard, 'function', '麥塊版缺少 generateAndDownloadMinecraftCard');
 
+// 6.1 核心跑壘與規則邏輯單元測試 (P1-4 gameLogic.js)
+const soloHr = testAdvanceRunners([false, false, false], 4);
+assert.equal(soloHr.runsScored, 1, '陽春全壘打得分應為 1');
+assert.deepEqual(soloHr.newBases, [false, false, false], '全壘打後壘包應清空');
+
+const grandSlam = testAdvanceRunners([true, true, true], 4);
+assert.equal(grandSlam.runsScored, 4, '滿壘全壘打得分應為 4');
+assert.deepEqual(grandSlam.newBases, [false, false, false], '滿壘全壘打後壘包應清空');
+
+const doubleAdv = testAdvanceRunners([true, false, false], 2);
+assert.equal(doubleAdv.runsScored, 0, '一壘有人敲二壘打無人回本壘');
+assert.deepEqual(doubleAdv.newBases, [false, true, true], '一壘有人敲二壘打應佔二三壘');
+
+const coinsTest = testCalculateBaseballCoins({
+  isHR: true,
+  wasBasesLoaded: true,
+  qteBonus: 35,
+  isDragonBat: true,
+  petBonus: 10,
+  buildBonus: 15,
+  blitzBonus: 35,
+  encounterMultiplier: 2,
+  isRainbowBat: false,
+  hasCoinMagnet: true
+});
+// (80 + 35 + 15 + 10 + 15 + 35) * 2 * 2 = 190 * 4 = 760
+assert.equal(coinsTest, 760, `滿壘彩金倍率疊加計算錯誤，預期 760 實際為 ${coinsTest}`);
+
+assert.equal(testEscapeHTML('<script>alert("1")</script>'), '&lt;script&gt;alert(&quot;1&quot;)&lt;/script&gt;', 'XSS 轉義失敗');
+
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const browserEntryModules = [
   'sw.js',
@@ -143,7 +179,9 @@ const browserEntryModules = [
   'js/audio.js',
   'js/minecraftGame.js',
   'js/minecraftWorld.js',
-  'js/minecraftAudio.js'
+  'js/minecraftAudio.js',
+  'js/gameplayUpgrades.js',
+  'js/gameLogic.js'
 ];
 for (const relPath of browserEntryModules) {
   execFileSync(process.execPath, ['--check', path.join(rootDir, relPath)], { stdio: 'pipe' });
@@ -171,6 +209,43 @@ for (const mdRel of mdFiles) {
   assert.ok(content.length > 200, `${mdRel} 內容過短`);
   assert.ok(!content.includes('与'), `${mdRel} 發現簡體字「与」`);
 }
-console.log('✅ [6/6] 棒球版、麥塊版、PWA Service Worker、print-exam 18 專項與 8 份紙本教材檢驗全數通過\n');
+console.log('✅ [6/7] 棒球版、麥塊版、PWA Service Worker、print-exam 18 專項與 8 份紙本教材檢驗全數通過');
+
+// 7. 數學題庫數值算式自動化驗算（P1-3）
+let mathFormulaCount = 0;
+for (const q of MATH_QUESTIONS) {
+  const text = q.question + ' ' + q.hint;
+  const re = /((?:\d+\s*[\+\-]\s*)+\d+)\s*=\s*(\d+)/g;
+  let match;
+  while ((match = re.exec(text)) !== null) {
+    mathFormulaCount++;
+    const [full, expr, result] = match;
+    const tokens = expr.match(/(\d+|[\+\-])/g);
+    let val = parseInt(tokens[0], 10);
+    for (let i = 1; i < tokens.length; i += 2) {
+      const op = tokens[i];
+      const num = parseInt(tokens[i + 1], 10);
+      if (op === '+') val += num;
+      else if (op === '-') val -= num;
+    }
+    const expected = parseInt(result, 10);
+    assert.equal(
+      val,
+      expected,
+      `${q.id} 算式數學錯誤:「${expr.trim()} = ${result}」，實際計算為 ${val}`
+    );
+  }
+
+  // 驗證正確選項的 hitResult 不得含有失敗語意
+  const correctOpt = q.options.find(o => o.isCorrect);
+  assert.ok(
+    !correctOpt.hitResult.includes('揮棒落空') &&
+    !correctOpt.hitResult.includes('OUT') &&
+    !correctOpt.hitResult.includes('碎石') &&
+    !correctOpt.hitResult.includes('陷阱'),
+    `${q.id} 正確選項 hitResult 語意異常: ${correctOpt.hitResult}`
+  );
+}
+console.log(`✅ [7/7] 數學題庫全部 ${mathFormulaCount} 條進退位與兩步驟算式自動化驗算 100% 正確\n`);
 
 console.log('🎉 全部 150 題與雙版本系統模組檢測 100% 完美通過！');

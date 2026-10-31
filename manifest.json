@@ -3,8 +3,23 @@
   "short_name": "小二期中3D王",
   "description": "108 課綱國小二年級上學期期中考複習（康軒國語、翰林數學、生活課程共 150 題），含 3D 實況棒球版、3D 麥塊體素版與 A4 考卷列印器。",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#090d16",
   "theme_color": "#2563eb",
-  "orientation": "any"
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
