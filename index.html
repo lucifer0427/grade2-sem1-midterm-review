@@ -23,18 +23,26 @@
   <!-- 頂部 Jumbotron 棒球計分板 -->
   <div id="jumbotron-hud">
     <div class="scoreboard-top">
-      <div class="inning-badge" id="hud-inning">第 1 局上</div>
+      <div class="inning-badge" id="hud-inning">第 1 局上 / 共 9 局</div>
+      
       <div class="score-stats">
         <span>得分: <b id="hud-score">0</b></span>
-        <span>出局數: <b id="hud-strikes">-</b></span>
+        <span>好球數: <b id="hud-strikes">-</b></span>
       </div>
+
       <div class="hud-controls">
-        <button class="hud-btn" id="btn-speak">📢 朗讀題目</button>
-        <button class="hud-btn" id="btn-mute">🔊 音效開</button>
+        <select id="select-mode" class="hud-select">
+          <option value="all">⚾ 綜合對抗賽 (100題)</option>
+          <option value="chinese">📖 康軒國語 (50題)</option>
+          <option value="math">🔢 翰林數學 (50題)</option>
+        </select>
+        <button class="hud-btn" id="btn-speak">📢 念題</button>
+        <button class="hud-btn" id="btn-mute">🔊 音效</button>
       </div>
     </div>
+    
     <div class="question-box">
-      <div id="hud-subject">【國語】第一課 新學年新希望</div>
+      <div id="hud-subject">【國語】載入中...</div>
       <div id="hud-question">載入題目中...</div>
       <div id="hud-phonetic"></div>
     </div>

@@ -1,26 +1,28 @@
 /**
  * 棒球對決主遊戲循環 (Three.js + HTML5 HUD)
+ * 支援 100 題大題庫 (國語 50 + 數學 50) 隨機 9 局賽事
  */
 import * as THREE from 'three';
 import confetti from 'canvas-confetti';
-import { CURRICULUM_DATA } from './curriculum.js';
+import { getGameQuestions } from './curriculum.js';
 import { BaseballField } from './baseballField.js';
 import { soundCtrl } from './audio.js';
 
 export class GameEngine {
   constructor() {
     this.container = document.getElementById('canvas-container');
+    this.currentMode = 'all'; // 'all' | 'chinese' | 'math'
+    this.questions = [];
     this.currentQuestionIdx = 0;
     this.score = 0;
     this.strikes = 0;
     this.hits = 0;
-    this.totalQuestions = CURRICULUM_DATA.length;
     this.isAnimating = false;
 
     this.initThree();
     this.field = new BaseballField(this.scene);
     this.setupEvents();
-    this.loadQuestion(0);
+    this.startNewGame('all');
     this.animate();
   }
 
@@ -55,20 +57,37 @@ export class GameEngine {
     this.renderer.setSize(width, height);
   }
 
+  startNewGame(mode = 'all') {
+    this.currentMode = mode;
+    this.score = 0;
+    this.strikes = 0;
+    this.hits = 0;
+    this.currentQuestionIdx = 0;
+    // 每次開新局隨機抽取 9 題
+    this.questions = getGameQuestions(mode, 9);
+
+    document.getElementById('hud-score').textContent = '0';
+    document.getElementById('hud-strikes').textContent = '-';
+    document.getElementById('final-modal').classList.add('hidden');
+    document.getElementById('feedback-modal').classList.add('hidden');
+
+    this.loadQuestion(0);
+  }
+
   loadQuestion(idx) {
-    if (idx >= this.totalQuestions) {
+    if (idx >= this.questions.length) {
       this.showFinalCard();
       return;
     }
 
     this.currentQuestionIdx = idx;
-    const q = CURRICULUM_DATA[idx];
+    const q = this.questions[idx];
 
     // 更新 HUD
     document.getElementById('hud-subject').textContent = `【${q.subject}】${q.unit}`;
     document.getElementById('hud-question').textContent = q.question;
     document.getElementById('hud-phonetic').textContent = q.phonetic || '';
-    document.getElementById('hud-inning').textContent = `第 ${idx + 1} 局上`;
+    document.getElementById('hud-inning').textContent = `第 ${idx + 1} 局上 / 共 9 局`;
 
     // 渲染三個打擊選項按鈕
     const optionsContainer = document.getElementById('options-container');
@@ -113,11 +132,11 @@ export class GameEngine {
     // 1. 投手投球飛向本壘
     const ball = this.field.ball;
     const startPos = new THREE.Vector3(0, 2.2, 15);
-    const targetOffset = (zoneIdx - 1) * 0.9; // -0.9, 0, 0.9
+    const targetOffset = (zoneIdx - 1) * 0.9;
     const hitPos = new THREE.Vector3(-0.6 + targetOffset, 1.8, 27.5);
 
     let progress = 0;
-    const pitchDuration = 40; // 投球幀數
+    const pitchDuration = 40;
 
     const pitchInterval = setInterval(() => {
       progress += 1 / pitchDuration;
@@ -160,11 +179,11 @@ export class GameEngine {
       // 答錯：好球/揮棒落空
       soundCtrl.playMissSound();
       this.strikes += 1;
-      document.getElementById('hud-strikes').textContent = 'X '.repeat(this.strikes % 3 || 3);
+      document.getElementById('hud-strikes').textContent = 'X '.repeat((this.strikes - 1) % 3 + 1);
 
       setTimeout(() => {
-        const currentQ = CURRICULUM_DATA[this.currentQuestionIdx];
-        this.showFeedbackModal(false, `${option.hitResult}<br><br>💡 <b>教練提醒</b>：${currentQ.hint}`);
+        const currentQ = this.questions[this.currentQuestionIdx];
+        this.showFeedbackModal(false, `${option.hitResult}<br><br>💡 <b>教練戰術提醒</b>：${currentQ.hint}`);
       }, 500);
     }
   }
@@ -181,7 +200,6 @@ export class GameEngine {
 
     const flyInterval = setInterval(() => {
       t += 1 / duration;
-      // 貝茲曲線拋物線
       ball.position.x = THREE.MathUtils.lerp(start.x, dest.x, t);
       ball.position.z = THREE.MathUtils.lerp(start.z, dest.z, t);
       ball.position.y = start.y + Math.sin(t * Math.PI) * 22 + (dest.y - start.y) * t;
@@ -204,11 +222,10 @@ export class GameEngine {
     msg.innerHTML = messageHtml;
     modal.classList.remove('hidden');
 
-    // 念出結果
     soundCtrl.speakText(isSuccess ? '全壘打！' : '揮空！');
   }
 
-  // 下一題
+  // 下一球
   nextQuestion() {
     document.getElementById('feedback-modal').classList.add('hidden');
     this.isAnimating = false;
@@ -218,7 +235,7 @@ export class GameEngine {
   // 結算 MVP 卡片
   showFinalCard() {
     const modal = document.getElementById('final-modal');
-    const avg = ((this.hits / this.totalQuestions)).toFixed(3).replace('0.', '.');
+    const avg = ((this.hits / this.questions.length)).toFixed(3).replace('0.', '.');
     document.getElementById('final-avg').textContent = avg;
     document.getElementById('final-hr').textContent = this.hits;
     document.getElementById('final-score').textContent = this.score;
@@ -236,8 +253,8 @@ export class GameEngine {
   setupEvents() {
     // 朗讀按鈕
     document.getElementById('btn-speak').onclick = () => {
-      const q = CURRICULUM_DATA[this.currentQuestionIdx];
-      soundCtrl.speakText(`${q.subject}，${q.question}`);
+      const q = this.questions[this.currentQuestionIdx];
+      if (q) soundCtrl.speakText(`${q.subject}，${q.question}`);
     };
 
     // 靜音按鈕
@@ -252,14 +269,22 @@ export class GameEngine {
 
     // 重新開始
     document.getElementById('btn-restart').onclick = () => {
-      location.reload();
+      this.startNewGame(this.currentMode);
     };
+
+    // 科目切換按鈕 (全部 / 國語 / 數學)
+    const modeSelect = document.getElementById('select-mode');
+    if (modeSelect) {
+      modeSelect.onchange = (e) => {
+        this.startNewGame(e.target.value);
+      };
+    }
 
     // 鍵盤快捷鍵 A/S/D
     window.addEventListener('keydown', (e) => {
       if (this.isAnimating) return;
       const key = e.key.toUpperCase();
-      const q = CURRICULUM_DATA[this.currentQuestionIdx];
+      const q = this.questions[this.currentQuestionIdx];
       if (!q) return;
 
       if (key === 'A' && q.options[0]) this.handleSwing(q.options[0], 0);
