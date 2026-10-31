@@ -125,6 +125,15 @@ body, html {
   letter-spacing: 0.5px;
 }
 
+.highlight-char {
+  color: #fde047;
+  background: rgba(234, 179, 8, 0.25);
+  border: 2px solid #eab308;
+  padding: 0 6px;
+  border-radius: 6px;
+  margin: 0 2px;
+}
+
 #hud-phonetic {
   font-size: 14px;
   color: #fcd34d;

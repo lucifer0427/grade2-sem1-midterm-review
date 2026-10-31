@@ -39,7 +39,7 @@ export const MATH_QUESTIONS = [
     phonetic: "ㄧ ㄅㄞˇ ㄙˋ ㄕˊ",
     options: [
       { text: "140", isCorrect: true, hitResult: "平飛安打攻佔得點圈！" },
-      { text: "104", isCorrect: false, hitResult: "揮棒落空！這是的一百零四。" },
+      { text: "104", isCorrect: false, hitResult: "揮棒落空！這是一百零四。" },
       { text: "14", isCorrect: false, hitResult: "大揮空！忘了百位數！" }
     ],
     hint: "百位寫 1，十位寫 4，個位沒有就補 0，記作 140！"

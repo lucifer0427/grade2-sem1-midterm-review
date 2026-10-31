@@ -19,6 +19,11 @@ export class GameEngine {
     this.hits = 0;
     this.isAnimating = false;
 
+    // 計時器引用，避免切換模式時動畫殘留競態 (Race Condition)
+    this.pitchTimer = null;
+    this.flyTimer = null;
+    this.feedbackTimer = null;
+
     this.initThree();
     this.field = new BaseballField(this.scene);
     this.setupEvents();
@@ -57,13 +62,21 @@ export class GameEngine {
     this.renderer.setSize(width, height);
   }
 
+  clearTimers() {
+    if (this.pitchTimer) { clearInterval(this.pitchTimer); this.pitchTimer = null; }
+    if (this.flyTimer) { clearInterval(this.flyTimer); this.flyTimer = null; }
+    if (this.feedbackTimer) { clearTimeout(this.feedbackTimer); this.feedbackTimer = null; }
+  }
+
   startNewGame(mode = 'all') {
+    this.clearTimers();
+    this.isAnimating = false;
     this.currentMode = mode;
     this.score = 0;
     this.strikes = 0;
     this.hits = 0;
     this.currentQuestionIdx = 0;
-    // 每次開新局隨機抽取 9 題
+    // 每次開新局隨機抽取 9 題，且每題選項順序自動洗牌
     this.questions = getGameQuestions(mode, 9);
 
     document.getElementById('hud-score').textContent = '0';
@@ -72,6 +85,15 @@ export class GameEngine {
     document.getElementById('feedback-modal').classList.add('hidden');
 
     this.loadQuestion(0);
+  }
+
+  // 將題目中的 [目標字] 轉換為醒目黃色框標籤
+  formatQuestionHTML(rawText) {
+    const escaped = rawText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return escaped.replace(/\[([^\]]+)\]/g, '<span class="highlight-char">$1</span>');
   }
 
   loadQuestion(idx) {
@@ -85,7 +107,7 @@ export class GameEngine {
 
     // 更新 HUD
     document.getElementById('hud-subject').textContent = `【${q.subject}】${q.unit}`;
-    document.getElementById('hud-question').textContent = q.question;
+    document.getElementById('hud-question').innerHTML = this.formatQuestionHTML(q.question);
     document.getElementById('hud-phonetic').textContent = q.phonetic || '';
     document.getElementById('hud-inning').textContent = `第 ${idx + 1} 局上 / 共 9 局`;
 
@@ -136,22 +158,23 @@ export class GameEngine {
     const hitPos = new THREE.Vector3(-0.6 + targetOffset, 1.8, 27.5);
 
     let progress = 0;
-    const pitchDuration = 40;
+    const pitchDuration = 35;
 
-    const pitchInterval = setInterval(() => {
+    this.pitchTimer = setInterval(() => {
       progress += 1 / pitchDuration;
       ball.position.lerpVectors(startPos, hitPos, progress);
       ball.rotation.x += 0.3;
 
       if (progress >= 1) {
-        clearInterval(pitchInterval);
-        this.executeContact(option, zoneIdx, hitPos);
+        clearInterval(this.pitchTimer);
+        this.pitchTimer = null;
+        this.executeContact(option, zoneIdx);
       }
     }, 16);
   }
 
   // 擊球瞬間判定
-  executeContact(option, zoneIdx, hitPos) {
+  executeContact(option, zoneIdx) {
     // 揮棒動作
     this.field.batGroup.rotation.z = Math.PI / 3;
     this.field.batGroup.rotation.y = -Math.PI / 3;
@@ -165,7 +188,7 @@ export class GameEngine {
 
       // 棒球全壘打高飛軌跡 (直飛外野看台)
       this.animateHomeRun(zoneIdx, () => {
-        this.showFeedbackModal(true, option.hitResult);
+        this.showFeedbackModal(true, option.hitResult, '全壘打！太棒了！');
       });
 
       // 煙火彩帶
@@ -181,10 +204,14 @@ export class GameEngine {
       this.strikes += 1;
       document.getElementById('hud-strikes').textContent = 'X '.repeat((this.strikes - 1) % 3 + 1);
 
-      setTimeout(() => {
+      this.feedbackTimer = setTimeout(() => {
         const currentQ = this.questions[this.currentQuestionIdx];
-        this.showFeedbackModal(false, `${option.hitResult}<br><br>💡 <b>教練戰術提醒</b>：${currentQ.hint}`);
-      }, 500);
+        this.showFeedbackModal(
+          false,
+          `${option.hitResult}<br><br>💡 <b>教練戰術提醒</b>：${currentQ.hint}`,
+          `揮空！教練提醒你，${currentQ.hint}`
+        );
+      }, 450);
     }
   }
 
@@ -196,23 +223,24 @@ export class GameEngine {
     const dest = new THREE.Vector3(targetX, 18, -45); // 飛過全壘打大牆
 
     let t = 0;
-    const duration = 65;
+    const duration = 60;
 
-    const flyInterval = setInterval(() => {
+    this.flyTimer = setInterval(() => {
       t += 1 / duration;
       ball.position.x = THREE.MathUtils.lerp(start.x, dest.x, t);
       ball.position.z = THREE.MathUtils.lerp(start.z, dest.z, t);
       ball.position.y = start.y + Math.sin(t * Math.PI) * 22 + (dest.y - start.y) * t;
 
       if (t >= 1) {
-        clearInterval(flyInterval);
+        clearInterval(this.flyTimer);
+        this.flyTimer = null;
         onComplete();
       }
     }, 16);
   }
 
   // 結果反饋彈窗
-  showFeedbackModal(isSuccess, messageHtml) {
+  showFeedbackModal(isSuccess, messageHtml, speechText) {
     const modal = document.getElementById('feedback-modal');
     const title = document.getElementById('feedback-title');
     const msg = document.getElementById('feedback-msg');
@@ -222,7 +250,7 @@ export class GameEngine {
     msg.innerHTML = messageHtml;
     modal.classList.remove('hidden');
 
-    soundCtrl.speakText(isSuccess ? '全壘打！' : '揮空！');
+    soundCtrl.speakText(speechText);
   }
 
   // 下一球
@@ -261,7 +289,8 @@ export class GameEngine {
     const muteBtn = document.getElementById('btn-mute');
     muteBtn.onclick = () => {
       soundCtrl.isMuted = !soundCtrl.isMuted;
-      muteBtn.textContent = soundCtrl.isMuted ? '🔇 靜音中' : '🔊 音效開';
+      if (soundCtrl.isMuted) soundCtrl.stopSpeech();
+      muteBtn.textContent = soundCtrl.isMuted ? '🔇 靜音' : '🔊 音效';
     };
 
     // 下一題按鈕
@@ -276,12 +305,34 @@ export class GameEngine {
     const modeSelect = document.getElementById('select-mode');
     if (modeSelect) {
       modeSelect.onchange = (e) => {
+        e.target.blur(); // 避免焦點留在 select 上被鍵盤空白鍵誤觸
         this.startNewGame(e.target.value);
       };
     }
 
-    // 鍵盤快捷鍵 A/S/D
+    // 鍵盤快捷鍵 A/S/D 揮棒 + Enter/Space 下一球
     window.addEventListener('keydown', (e) => {
+      const feedbackModal = document.getElementById('feedback-modal');
+      const finalModal = document.getElementById('final-modal');
+
+      // 若反饋彈窗開啟中，按 Enter 或 Space 直接進入下一球
+      if (!feedbackModal.classList.contains('hidden')) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.nextQuestion();
+        }
+        return;
+      }
+
+      // 若結算彈窗開啟中，按 Enter 或 Space 直接再打一場
+      if (!finalModal.classList.contains('hidden')) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.startNewGame(this.currentMode);
+        }
+        return;
+      }
+
       if (this.isAnimating) return;
       const key = e.key.toUpperCase();
       const q = this.questions[this.currentQuestionIdx];

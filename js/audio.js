@@ -100,14 +100,22 @@ class SoundController {
 
   // 球場主播語音朗讀 (Web Speech API)
   speakText(text) {
-    if (!('speechSynthesis' in window)) return;
+    if (this.isMuted || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel(); // 停止上一段話
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // 過濾掉題目中的方括號避免念出符號
+    const cleanText = text.replace(/[\[\]]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'zh-TW';
     utterance.rate = 0.95; // 稍微放慢語速，適配二年級學童聽力
     utterance.pitch = 1.05; // 略帶朝氣的音調
     window.speechSynthesis.speak(utterance);
+  }
+
+  stopSpeech() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
   }
 }
 

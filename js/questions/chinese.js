@@ -87,7 +87,7 @@ export const CHINESE_QUESTIONS = [
     id: "chi_07",
     subject: "國語",
     unit: "第一課 新學年新希望",
-    question: "「弟弟今天自已[背]著大書包上學。」括號中的「背」讀音是？",
+    question: "「弟弟今天自己[背]著大書包上學。」括號中的「背」讀音是？",
     phonetic: "ㄅㄟ ㄓㄜ˙ ㄕㄨ ㄅㄠ",
     options: [
       { text: "ㄅㄟ (一聲)", isCorrect: true, hitResult: "超大號安打送回兩分！" },
@@ -158,7 +158,7 @@ export const CHINESE_QUESTIONS = [
     phonetic: "ㄒㄧㄤˋ ㄗˇ ㄌㄧˇ",
     options: [
       { text: "「向」應改為「巷」", isCorrect: true, hitResult: "全壘打！直奔中外野！" },
-      { text: "「曬」應改為「曬」", isCorrect: false, hitResult: "內野飛球接殺！" },
+      { text: "「貓」應改為「描」", isCorrect: false, hitResult: "內野飛球接殺！" },
       { text: "「陽」應改為「揚」", isCorrect: false, hitResult: "三振出局！" }
     ],
     hint: "小「巷」裡面有住宅或牆壁，是小巷弄的「巷」！"
