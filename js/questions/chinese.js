@@ -1,19 +1,20 @@
 /**
  * 國語科（康軒版二上 第1~6課、統整活動一與二）- 完整 50 題期中評量題庫
  * 涵蓋：多音字、形近字挑錯、部件部首、課文文意理解、短語仿寫與量詞
+ * 已通過審定本生字表與教育部國語辭典簡編本讀音校驗（防洩題遮罩版）
  */
 
 export const CHINESE_QUESTIONS = [
-  // --- 多音字辨析 (1~10) ---
+  // --- 多音字辨析 (1~10)：遮罩目標字注音防止洩題 ---
   {
     id: "chi_01",
     subject: "國語",
     unit: "第五課 坐竹籃船",
-    question: "「放暑[假]真開心！」括號中的「假」讀音是？",
-    phonetic: "ㄈㄤˋ ㄕㄨˇ ㄐㄧㄚˋ ㄓㄣ ㄎㄞ ㄒㄧㄣ",
+    question: "「放暑[假]真開心！」框起來的「假」讀音是？",
+    phonetic: "ㄈㄤˋ ㄕㄨˇ 【 ？ 】 ㄓㄣ ㄎㄞ ㄒㄧㄣ",
     options: [
       { text: "ㄐㄧㄚˋ (四聲)", isCorrect: true, hitResult: "全壘打！直飛中外野！" },
-      { text: "ㄐㄧㄚˇ (三聲)", isCorrect: false, hitResult: "揮棒落空！這是真假的意思喔。" },
+      { text: "ㄐㄧㄚˇ (三聲)", isCorrect: false, hitResult: "揮棒落空！三聲是真假、假裝喔。" },
       { text: "ㄐㄧㄚ (一聲)", isCorrect: false, hitResult: "界外球！沒有這個讀音。" }
     ],
     hint: "表示放假、假期的休息時間，要讀第四聲「ㄐㄧㄚˋ」！"
@@ -22,12 +23,12 @@ export const CHINESE_QUESTIONS = [
     id: "chi_02",
     subject: "國語",
     unit: "第一課 新學年新希望",
-    question: "「想要進步，就[得]加倍努力。」括號中的「得」讀音是？",
-    phonetic: "ㄒㄧㄤˇ ㄧㄠˋ ㄐㄧㄣˋ ㄅㄨˋ ， ㄐㄧㄡˋ ㄉㄟˇ ㄐㄧㄚ ㄅㄟˋ ㄋㄨˇ ㄌㄧˋ",
+    question: "「想要進步，就[得]加倍努力。」框起來的「得」讀音是？",
+    phonetic: "ㄒㄧㄤˇ ㄧㄠˋ ㄐㄧㄣˋ ㄅㄨˋ ， ㄐㄧㄡˋ 【 ？ 】 ㄐㄧㄚ ㄅㄟˋ ㄋㄨˇ ㄌㄧˋ",
     options: [
-      { text: "ㄉㄜˊ (二聲)", isCorrect: false, hitResult: "內野滾地出局！這是得到的意思。" },
+      { text: "ㄉㄜˊ (二聲)", isCorrect: false, hitResult: "內野滾地出局！二聲是得到、得獎。" },
       { text: "ㄉㄟˇ (三聲)", isCorrect: true, hitResult: "滿貫全壘打！越過計分板！" },
-      { text: "˙ㄉㄜ (輕聲)", isCorrect: false, hitResult: "揮棒落空！這是跑得快的意思。" }
+      { text: "˙ㄉㄜ (輕聲)", isCorrect: false, hitResult: "揮棒落空！輕聲是跑得快。" }
     ],
     hint: "表示「必須、不得不」時，要讀第三聲「ㄉㄟˇ」！"
   },
@@ -35,73 +36,73 @@ export const CHINESE_QUESTIONS = [
     id: "chi_03",
     subject: "國語",
     unit: "第三課 走過小巷",
-    question: "「微風輕輕的吹[著]。」括號中的「著」讀音是？",
-    phonetic: "ㄨㄟˊ ㄈㄥ ㄑㄧㄥ ㄑㄧㄥ ˙ㄉㄜ ㄔㄨㄟ ㄓㄜ˙",
+    question: "「微風輕輕的吹[著]。」框起來的「著」讀音是？",
+    phonetic: "ㄨㄟˊ ㄈㄥ ㄑㄧㄥ ㄑㄧㄥ ˙ㄉㄜ ㄔㄨㄟ 【 ？ 】",
     options: [
-      { text: "ㄓㄨㄛˊ (二聲)", isCorrect: false, hitResult: "高飛球被接殺！這是著急的意思。" },
-      { text: "ㄓㄠ (一聲)", isCorrect: false, hitResult: "界外球！這是著涼的意思。" },
+      { text: "ㄓㄨㄛˊ (二聲)", isCorrect: false, hitResult: "高飛球被接殺！二聲是著急、穿著。" },
+      { text: "ㄓㄠ (一聲)", isCorrect: false, hitResult: "界外球！一聲是著涼、睡著。" },
       { text: "˙ㄓㄜ (輕聲)", isCorrect: true, hitResult: "轟出右外野看台！全壘打！" }
     ],
-    hint: "表示動作正在持續進行（吹著、走著），讀輕聲「˙ㄓㄜ」！"
+    hint: "表示動作正在持續進行（吹著、走著、看著），讀輕聲「˙ㄓㄜ」！"
   },
   {
     id: "chi_04",
     subject: "國語",
     unit: "第一課 新學年新希望",
-    question: "「老師在[教]室裡上課。」括號中的「教」讀音是？",
-    phonetic: "ㄐㄧㄠˋ ㄕˋ",
+    question: "「老師在[教]室裡上課。」框起來的「教」讀音是？",
+    phonetic: "ㄌㄠˇ ㄕ ㄗㄞˋ 【 ？ 】 ㄕˋ ㄌㄧˇ ㄕㄤˋ ㄎㄜˋ",
     options: [
       { text: "ㄐㄧㄠˋ (四聲)", isCorrect: true, hitResult: "陽春砲炸裂！" },
-      { text: "ㄐㄧㄠ (一聲)", isCorrect: false, hitResult: "揮棒太慢落空！一聲是「教書」的動作。" },
+      { text: "ㄐㄧㄠ (一聲)", isCorrect: false, hitResult: "揮棒太慢落空！一聲是「教書、教唱」的動作。" },
       { text: "ㄐㄧㄠˇ (三聲)", isCorrect: false, hitResult: "界外球！沒有這個讀音。" }
     ],
-    hint: "「教室、教師、教育」名詞或場所詞素讀第四聲「ㄐㄧㄠˋ」！"
+    hint: "「教室、教師、教育」作為場所或名詞時，讀第四聲「ㄐㄧㄠˋ」！"
   },
   {
     id: "chi_05",
     subject: "國語",
     unit: "統整活動二",
-    question: "「星期天你有一點[空]閒嗎？」括號中的「空」讀音是？",
-    phonetic: "ㄎㄨㄥˋ ㄒㄧㄢˊ",
+    question: "「星期天你有一點[空]閒嗎？」框起來的「空」讀音是？",
+    phonetic: "ㄒㄧㄥ ㄑㄧˊ ㄊㄧㄢ ㄋㄧˇ ㄧㄡˇ 【 ？ 】 ㄒㄧㄢˊ ˙ㄇㄚ",
     options: [
-      { text: "ㄎㄨㄥ (一聲)", isCorrect: false, hitResult: "投手正面接殺！一聲是天空的空。" },
+      { text: "ㄎㄨㄥ (一聲)", isCorrect: false, hitResult: "投手正面接殺！一聲是天空、空氣。" },
       { text: "ㄎㄨㄥˋ (四聲)", isCorrect: true, hitResult: "中外野大號全壘打！" },
       { text: "ㄍㄨㄥ (一聲)", isCorrect: false, hitResult: "大揮空！讀音完全不同！" }
     ],
-    hint: "表示閒暇、時間或空間間隙（有空、空地、填空）讀第四聲「ㄎㄨㄥˋ」！"
+    hint: "表示閒暇時間或空間間隙（有空、空地、填空）讀第四聲「ㄎㄨㄥˋ」！"
   },
   {
     id: "chi_06",
     subject: "國語",
     unit: "第四課 運動會",
-    question: "「風車在風中一直[轉]動。」括號中的「轉」讀音是？",
-    phonetic: "ㄓㄨㄢˋ ㄉㄨㄥˋ",
+    question: "「風車在風中一直[轉]動。」框起來的「轉」讀音是？",
+    phonetic: "ㄈㄥ ㄔㄜ ㄧˋ ㄓˊ 【 ？ 】 ㄉㄨㄥˋ",
     options: [
       { text: "ㄓㄨㄢˋ (四聲)", isCorrect: true, hitResult: "一棒扛出全壘打牆！" },
       { text: "ㄓㄨㄢˇ (三聲)", isCorrect: false, hitResult: "擦棒出局！三聲是轉彎、轉身。" },
       { text: "ㄓㄨㄢ (一聲)", isCorrect: false, hitResult: "揮空三振！" }
     ],
-    hint: "圍繞中心打轉、旋動（轉動、轉圈）讀第四聲「ㄓㄨㄢˋ」！"
+    hint: "圍繞中心打轉、旋轉（轉動、轉圈）讀第四聲「ㄓㄨㄢˋ」！"
   },
   {
     id: "chi_07",
     subject: "國語",
     unit: "第一課 新學年新希望",
-    question: "「弟弟今天自己[背]著大書包上學。」括號中的「背」讀音是？",
-    phonetic: "ㄅㄟ ㄓㄜ˙ ㄕㄨ ㄅㄠ",
+    question: "「弟弟今天自己[背]著大書包上學。」框起來的「背」讀音是？",
+    phonetic: "ㄉㄧˋ ˙ㄉㄧ 【 ？ 】 ˙ㄓㄜ ㄉㄚˋ ㄕㄨ ㄅㄠ",
     options: [
       { text: "ㄅㄟ (一聲)", isCorrect: true, hitResult: "超大號安打送回兩分！" },
-      { text: "ㄅㄟˋ (四聲)", isCorrect: false, hitResult: "擊球無力滾地！四聲是背部身體部位。" },
+      { text: "ㄅㄟˋ (四聲)", isCorrect: false, hitResult: "擊球無力滾地！四聲是後背、背影。" },
       { text: "ㄅㄞ (一聲)", isCorrect: false, hitResult: "揮棒落空！" }
     ],
-    hint: "用肩膀馱負東西的動作（背書包、背小孩）讀第一聲「ㄅㄟ」！"
+    hint: "用肩膀馱負物品的動作（背書包、背小孩）讀第一聲「ㄅㄟ」！"
   },
   {
     id: "chi_08",
     subject: "國語",
     unit: "第二課 一起做早餐",
-    question: "「妹妹跑[得]滿頭大汗。」括號中的「得」讀音是？",
-    phonetic: "ㄆㄠˇ ˙ㄉㄜ ㄇㄢˇ ㄊㄡˊ ㄉㄚˋ ㄏㄢˋ",
+    question: "「妹妹跑[得]滿頭大汗。」框起來的「得」讀音是？",
+    phonetic: "ㄇㄟˋ ˙ㄇㄟ ㄆㄠˇ 【 ？ 】 ㄇㄢˇ ㄊㄡˊ ㄉㄚˋ ㄏㄢˋ",
     options: [
       { text: "˙ㄉㄜ (輕聲)", isCorrect: true, hitResult: "直擊外野看台！全壘打！" },
       { text: "ㄉㄜˊ (二聲)", isCorrect: false, hitResult: "二壘滾地球封殺！" },
@@ -113,8 +114,8 @@ export const CHINESE_QUESTIONS = [
     id: "chi_09",
     subject: "國語",
     unit: "第五課 坐竹籃船",
-    question: "「小明[假]裝成一隻兇猛的老虎。」括號中的「假」讀音是？",
-    phonetic: "ㄐㄧㄚˇ ㄓㄨㄤ",
+    question: "「小明[假]裝成一隻兇猛的老虎。」框起來的「假」讀音是？",
+    phonetic: "ㄒㄧㄠˇ ㄇㄧㄥˊ 【 ？ 】 ㄓㄨㄤ ㄔㄥˊ ㄌㄠˇ ㄏㄨˇ",
     options: [
       { text: "ㄐㄧㄚˇ (三聲)", isCorrect: true, hitResult: "強勁安打！跑者衝回本壘！" },
       { text: "ㄐㄧㄚˋ (四聲)", isCorrect: false, hitResult: "游擊手攔截出局！四聲是放假。" },
@@ -126,8 +127,8 @@ export const CHINESE_QUESTIONS = [
     id: "chi_10",
     subject: "國語",
     unit: "第六課 小鎮的柿餅節",
-    question: "「藍藍的天[空]飄著幾朵白雲。」括號中的「空」讀音是？",
-    phonetic: "ㄊㄧㄢ ㄎㄨㄥ",
+    question: "「藍藍的天[空]飄著幾朵白雲。」框起來的「空」讀音是？",
+    phonetic: "ㄌㄢˊ ㄌㄢˊ ˙ㄉㄜ ㄊㄧㄢ 【 ？ 】",
     options: [
       { text: "ㄎㄨㄥ (一聲)", isCorrect: true, hitResult: "轟破記分板！全壘打！" },
       { text: "ㄎㄨㄥˋ (四聲)", isCorrect: false, hitResult: "揮棒落空！四聲是有空、空地。" },
@@ -136,7 +137,7 @@ export const CHINESE_QUESTIONS = [
     hint: "廣大無邊的空間、沒有東西（天空、空氣、空手）讀第一聲「ㄎㄨㄥ」！"
   },
 
-  // --- 形近字挑錯與字形辨析 (11~22) ---
+  // --- 形近字挑錯與字形辨析 (11~22)：鎖定康軒二上 1~6 課核心生字 ---
   {
     id: "chi_11",
     subject: "國語",
@@ -155,39 +156,39 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第三課 走過小巷",
     question: "找出錯字：「小貓在向子裡曬太陽。」哪一個字寫錯了？",
-    phonetic: "ㄒㄧㄤˋ ㄗˇ ㄌㄧˇ",
+    phonetic: "ㄒㄧㄤˋ ˙ㄗ ㄌㄧˇ",
     options: [
       { text: "「向」應改為「巷」", isCorrect: true, hitResult: "全壘打！直奔中外野！" },
       { text: "「貓」應改為「描」", isCorrect: false, hitResult: "內野飛球接殺！" },
       { text: "「陽」應改為「揚」", isCorrect: false, hitResult: "三振出局！" }
     ],
-    hint: "小「巷」裡面有住宅或牆壁，是小巷弄的「巷」！"
+    hint: "小「巷」裡面有住宅與紅磚牆，是小巷弄的「巷」！"
   },
   {
     id: "chi_13",
     subject: "國語",
     unit: "第二課 一起做早餐",
     question: "「圓」和「園」怎麼選？「花[  ]裡的番茄像輪子一樣[  ]。」",
-    phonetic: "ㄏㄨㄚ ㄩㄢˊ ㄌㄧˇ ˙ㄉㄜ ㄈㄢ ㄑㄧㄝˊ ㄧㄤˋ ㄩㄢˊ ˙ㄉㄜ",
+    phonetic: "ㄏㄨㄚ ㄩㄢˊ 、 ㄩㄢˊ ㄒㄧㄥˊ",
     options: [
       { text: "園、圓", isCorrect: true, hitResult: "二壘安打清壘！" },
       { text: "圓、園", isCorrect: false, hitResult: "揮棒落空！順序相反囉！" },
       { text: "園、園", isCorrect: false, hitResult: "滾地球刺殺！" }
     ],
-    hint: "植物生長的地方是「花園（園部）」，形狀圓形的是「圓（圓圈）」。"
+    hint: "植物生長的地方是「花園」，形狀像輪子圓圓的是「圓」！"
   },
   {
     id: "chi_14",
     subject: "國語",
     unit: "第三課 走過小巷",
-    question: "找出錯字：「白兔慢步走在小草上。」哪一個字寫錯了？",
-    phonetic: "ㄇㄢˋ ㄅㄨˋ",
+    question: "找出錯字：「小烏龜走得很漫。」哪一個字寫錯了？（第三課生字）",
+    phonetic: "ㄗㄡˇ ˙ㄉㄜ ㄏㄣˇ ㄇㄢˋ",
     options: [
-      { text: "「慢」應改為「漫」", isCorrect: true, hitResult: "炸裂全壘打！" },
-      { text: "「步」應改為「布」", isCorrect: false, hitResult: "界外球出局！" },
-      { text: "「草」應改為「早」", isCorrect: false, hitResult: "揮棒過早！" }
+      { text: "「漫」應改為「慢」", isCorrect: true, hitResult: "炸裂全壘打！" },
+      { text: "「走」應改為「足」", isCorrect: false, hitResult: "界外球出局！" },
+      { text: "「很」應改為「狠」", isCorrect: false, hitResult: "揮棒過早！" }
     ],
-    hint: "悠閒散步稱為「漫步」（三點水部），慢慢走是慢。"
+    hint: "速度不快、慢慢走是豎心旁的「慢」（快慢的慢）！"
   },
   {
     id: "chi_15",
@@ -207,7 +208,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第四課 運動會",
     question: "找出錯字：「操場上漂著五彩旗幟。」哪一個字寫錯了？",
-    phonetic: "ㄆㄧㄠ ㄓㄜ˙ ㄑㄧˊ ㄓˋ",
+    phonetic: "ㄆㄧㄠ ˙ㄓㄜ ㄑㄧˊ ㄓˋ",
     options: [
       { text: "「漂」應改為「飄」", isCorrect: true, hitResult: "右外野深遠全壘打！" },
       { text: "「彩」應改為「採」", isCorrect: false, hitResult: "滾地雙殺！" },
@@ -220,23 +221,23 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第五課 坐竹籃船",
     question: "「籃」和「藍」的分別：「外公坐在[  ]色的竹[  ]船上。」",
-    phonetic: "ㄌㄢˊ ㄙㄜˋ ˙ㄉㄜ ㄓㄨˊ ㄌㄢˊ ㄔㄨㄢˊ",
+    phonetic: "ㄌㄢˊ ㄙㄜˋ 、 ㄓㄨˊ ㄌㄢˊ ㄔㄨㄢˊ",
     options: [
       { text: "藍、籃", isCorrect: true, hitResult: "一支漂亮的高飛犧牲打送回得分！" },
       { text: "籃、藍", isCorrect: false, hitResult: "看錯球路被三振！" },
       { text: "藍、藍", isCorrect: false, hitResult: "界外高飛球！" }
     ],
-    hint: "顏色的藍是「草字頭藍」，竹子編的竹籃是「竹字頭籃」！"
+    hint: "顏色的藍是「艸字頭藍」，竹子編織的竹籃船是「竹字頭籃」！"
   },
   {
     id: "chi_18",
     subject: "國語",
     unit: "第六課 小鎮的柿餅節",
-    question: "找出錯字：「新竹小鎮吹起乾噪的九降風。」哪一個字寫錯了？",
+    question: "找出錯字：「秋天吹起乾噪的九降風。」哪一個字寫錯了？",
     phonetic: "ㄍㄢ ㄗㄠˋ",
     options: [
       { text: "「噪」應改為「燥」", isCorrect: true, hitResult: "中外野大號全壘打！" },
-      { text: "「鎮」應改為「填」", isCorrect: false, hitResult: "揮棒落空！" },
+      { text: "「乾」應改為「幹」", isCorrect: false, hitResult: "揮棒落空！" },
       { text: "「吹」應改為「炊」", isCorrect: false, hitResult: "捕手接殺！" }
     ],
     hint: "天氣乾「燥」缺水容易起火，是火部的「燥」；口部「噪」是噪音！"
@@ -252,14 +253,14 @@ export const CHINESE_QUESTIONS = [
       { text: "準、准", isCorrect: false, hitResult: "揮棒太慢！" },
       { text: "準、準", isCorrect: false, hitResult: "外野飛球被接殺！" }
     ],
-    hint: "答應批准是兩點水的「准」；準備標準是三點水的「準」！"
+    hint: "答應批准是兩點水的「准」；準備標準是十部（上頭有水與隹）的「準」！"
   },
   {
     id: "chi_20",
     subject: "國語",
     unit: "第三課 走過小巷",
     question: "「暖」的部首是什麼？它與什麼有關係？",
-    phonetic: "ㄨㄢˇ ˙ㄉㄜ ㄋㄨㄢˇ",
+    phonetic: "ㄨㄣ ㄋㄨㄢˇ ˙ㄉㄜ ㄋㄨㄢˇ",
     options: [
       { text: "日部，和太陽溫暖有關", isCorrect: true, hitResult: "全壘打！打者霸氣甩棒！" },
       { text: "火部，和煮飯火焰有關", isCorrect: false, hitResult: "好球未揮！" },
@@ -313,13 +314,13 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "統整活動二",
     question: "「腿、胸、背」這三個字左邊或下方的部首是？",
-    phonetic: "ㄊㄨㄟˇ 、 ㄒㄧㄨㄥ 、 ㄅㄟˋ",
+    phonetic: "ㄊㄨㄟˇ 、 ㄒㄩㄥ 、 ㄅㄟˋ",
     options: [
       { text: "肉部 (常寫成月字旁)", isCorrect: true, hitResult: "二壘安打帶有一分打點！" },
       { text: "月部 (和夜晚有關)", isCorrect: false, hitResult: "一壘滾地刺殺！" },
       { text: "骨部", isCorrect: false, hitResult: "揮棒太慢！" }
     ],
-    hint: "人體器官、肌肉部位的字，部首多半是「肉部」（外形似月）！"
+    hint: "人體器官、肌肉部位的字，部首多半是「肉部」（偏旁寫作月）！"
   },
   {
     id: "chi_25",
@@ -351,14 +352,14 @@ export const CHINESE_QUESTIONS = [
     id: "chi_27",
     subject: "國語",
     unit: "第六課 小鎮的柿餅節",
-    question: "「餅、糕、糖」這三個字都有「米」字部件，和什麼有關？",
-    phonetic: "ㄇㄧˇ ㄅㄨˋ",
+    question: "「餅、糕、糖」這三個字都有「米」或「飠」部件，和什麼有關？",
+    phonetic: "ㄅㄧㄥˇ 、 ㄍㄠ 、 ㄊㄤˊ",
     options: [
       { text: "糧食、米麥做成的食品", isCorrect: true, hitResult: "長打飛越外野手頭頂！" },
       { text: "穿在身上的衣服", isCorrect: false, hitResult: "揮空落空！" },
       { text: "田裡耕作的農具", isCorrect: false, hitResult: "界外球！" }
     ],
-    hint: "「米部」的字大多與稻米、麵粉糧食或糕餅甜點相關！"
+    hint: "「食（飠）部」與「米部」的字大多與糧食、糕餅甜點或飲食相關！"
   },
   {
     id: "chi_28",
@@ -397,7 +398,7 @@ export const CHINESE_QUESTIONS = [
       { text: "12 畫，無部", isCorrect: false, hitResult: "外野深遠被接殺！" },
       { text: "16 畫，夕部", isCorrect: false, hitResult: "揮空落空！" }
     ],
-    hint: "「舞」下面是兩隻腳跳動的形狀，部首是「舛（ㄔㄨㄢˇ）部」，共 14 畫！"
+    hint: "「舞」下面是兩隻腳相對跳動的形狀，部首是「舛（ㄔㄨㄢˇ）部」，共 14 畫！"
   },
   {
     id: "chi_31",
@@ -432,7 +433,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第一課 新學年新希望",
     question: "在〈新學年新希望〉中，作者升上二年級後希望怎麼做？",
-    phonetic: "ㄒㄧㄣ ㄒㄧㄤˇ ㄈㄚˇ",
+    phonetic: "ㄎㄜˋ ㄨㄣˊ ㄨㄣˊ ㄧˋ",
     options: [
       { text: "上課更專心，和同學互相幫助", isCorrect: true, hitResult: "三分全壘打！直飛外野大牆！" },
       { text: "天天睡到自然醒不上學", isCorrect: false, hitResult: "揮棒太慢！" },
@@ -497,7 +498,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第六課 小鎮的柿餅節",
     question: "新竹小鎮曬製柿餅時，最需要哪一種天然氣候條件的幫忙？",
-    phonetic: "ㄐㄧㄡˇ ㄐㄧㄤˋ ㄈㄥ",
+    phonetic: "ㄉㄧˋ ㄈㄤ ㄔㄢˇ ㄧㄝˋ",
     options: [
       { text: "乾燥的九降風與秋天溫暖日光", isCorrect: true, hitResult: "全壘打！滿場煙火歡呼！" },
       { text: "連續好幾天傾盆大雨", isCorrect: false, hitResult: "揮棒太慢！" },
@@ -510,7 +511,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第一課 新學年新希望",
     question: "「新學年新希望」這篇課文是什麼文體？",
-    phonetic: "ㄨㄣˊ ㄊㄧˇ",
+    phonetic: "ㄨㄣˊ ㄊㄧˇ ㄅㄧㄢˋ ㄒㄧ",
     options: [
       { text: "記敘文（散文詩結構）", isCorrect: true, hitResult: "紮實擊中球心！二壘安打！" },
       { text: "說明文", isCorrect: false, hitResult: "界外高飛接殺！" },
@@ -536,7 +537,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第四課 運動會",
     question: "課文中操場上飄著五彩旗幟，到處人聲鼎沸，可以用什麼成語形容？",
-    phonetic: "ㄖㄜˋ ㄋㄠˋ ㄈㄟ ㄈㄢˊ",
+    phonetic: "ㄔㄥˊ ㄩˇ ㄩㄣˋ ㄩㄥˋ",
     options: [
       { text: "熱鬧非凡", isCorrect: true, hitResult: "轟出滿貫砲！" },
       { text: "冷冷清清", isCorrect: false, hitResult: "擊成軟弱滾地！" },
@@ -549,7 +550,7 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "第六課 小鎮的柿餅節",
     question: "成熟曬乾後的柿餅吃起來口感如何？",
-    phonetic: "ㄎㄡˇ ㄍㄢˇ",
+    phonetic: "ㄎㄡˇ ㄍㄢˇ ㄇㄧㄠˊ ㄒㄧㄝˇ",
     options: [
       { text: "又香又甜、Ｑ彈爽口", isCorrect: true, hitResult: "超大號全壘打！" },
       { text: "又酸又辣", isCorrect: false, hitResult: "揮棒太慢！" },
@@ -564,13 +565,13 @@ export const CHINESE_QUESTIONS = [
     subject: "國語",
     unit: "短語仿寫",
     question: "仿寫練習：「（微風）（輕輕）的（吹）」，哪一個結構完全相同？",
-    phonetic: "ㄇㄧㄥˊ ㄘˊ + ㄈㄨˋ ㄘˊ + ㄉㄨㄥˋ ㄘˊ",
+    phonetic: "ㄇㄧㄥˊ ㄘˊ + ㄉㄧㄝˊ ㄗˋ + ㄉㄨㄥˋ ㄘˊ",
     options: [
       { text: "（小雨）（慢慢）的（落）", isCorrect: true, hitResult: "轟出右外野！全壘打！" },
-      { text: "（蘋果）（紅紅）的（臉）", isCorrect: false, hitResult: "揮棒落空！最後一個詞是名詞。" },
-      { text: "（大樹）（高大）的（站）", isCorrect: false, hitResult: "滾地球刺殺！" }
+      { text: "（蘋果）（紅紅）的（臉）", isCorrect: false, hitResult: "揮棒落空！最後一個詞「臉」是名詞。" },
+      { text: "（大樹）（高大）的（站）", isCorrect: false, hitResult: "滾地球刺殺！「高大」不是疊字。" }
     ],
-    hint: "結構必須是：名詞 ＋ 疊字副詞 ＋ 動詞，落是動詞！"
+    hint: "結構必須是：名詞 ＋ 疊字副詞 ＋ 動詞，「落」是動詞！"
   },
   {
     id: "chi_44",
@@ -580,17 +581,17 @@ export const CHINESE_QUESTIONS = [
     phonetic: "ㄑㄧㄥˊ ㄊㄞˋ ㄅㄨˇ ㄩˇ",
     options: [
       { text: "（累）得（坐下來）", isCorrect: true, hitResult: "深遠安打！攻下致勝分！" },
-      { text: "（熱）得（吃西瓜）", isCorrect: false, hitResult: "揮棒過早落空！" },
+      { text: "（熱）得（穿外套）", isCorrect: false, hitResult: "揮棒過早落空！語意不合邏輯。" },
       { text: "（快）得（跑不動）", isCorrect: false, hitResult: "界外球接殺！" }
     ],
-    hint: "「形容詞 ＋ 得 ＋ 動作反應」，累得坐下來完全符合情境！"
+    hint: "「形容詞 ＋ 得 ＋ 動作反應」，累得坐下來完全符合生活邏輯！"
   },
   {
     id: "chi_45",
     subject: "國語",
     unit: "量詞搭配",
     question: "選出正確的量詞：「秋天吹起了一[  ]涼風，樹上掉下了一[  ]柿子。」",
-    phonetic: "ㄌㄧㄤˋ ㄘˊ",
+    phonetic: "ㄌㄧㄤˋ ㄘˊ ㄌㄧㄢˊ ㄒㄧˊ",
     options: [
       { text: "陣、顆", isCorrect: true, hitResult: "大號全壘打直擊看台！" },
       { text: "個、朵", isCorrect: false, hitResult: "擦棒被捕！" },
@@ -609,27 +610,27 @@ export const CHINESE_QUESTIONS = [
       { text: "張、隻", isCorrect: false, hitResult: "內野刺殺！" },
       { text: "座、架", isCorrect: false, hitResult: "揮棒太慢！" }
     ],
-    hint: "長形巷弄用一「條」小巷；船隻用一「艘」或一「隻」竹籃船！"
+    hint: "細長巷弄用一「條」小巷；船隻用一「艘」竹籃船！"
   },
   {
     id: "chi_47",
     subject: "國語",
     unit: "詞語理解",
     question: "「大家分工合作」的「分工」是什麼意思？",
-    phonetic: "ㄈㄣ ㄍㄨㄥ",
+    phonetic: "ㄈㄣ ㄍㄨㄥ ㄏㄜˊ ㄗㄨㄛˋ",
     options: [
       { text: "每個人分擔不同的工作任務", isCorrect: true, hitResult: "平飛安打一壘有人！" },
       { text: "把工廠拆開來", isCorrect: false, hitResult: "揮棒落空！" },
       { text: "大家都不做工只休息", isCorrect: false, hitResult: "好球三振！" }
     ],
-    hint: "分工指大家依照專長或順序分配不同的工作，一起合力完成！"
+    hint: "分工指大家依照專長分配不同的工作任務，一起合力完成！"
   },
   {
     id: "chi_48",
     subject: "國語",
     unit: "句子重組",
     question: "「①迎著微風 ②走在小巷 ③小貓」這三組詞重組成通順句子應是？",
-    phonetic: "ㄐㄩˋ ㄗ˙ ㄓㄨㄥˋ ㄗㄨˇ",
+    phonetic: "ㄐㄩˋ ˙ㄗ ㄓㄨㄥˋ ㄗㄨˇ",
     options: [
       { text: "③①②（小貓迎著微風走在小巷）", isCorrect: true, hitResult: "再添一支全壘打！" },
       { text: "①②③（迎著微風走在小巷小貓）", isCorrect: false, hitResult: "擊球落空！" },
@@ -661,6 +662,6 @@ export const CHINESE_QUESTIONS = [
       { text: "字的正中央", isCorrect: false, hitResult: "揮空三振！" },
       { text: "字的右下方", isCorrect: false, hitResult: "內野滾地！" }
     ],
-    hint: "橫式書寫時，單引號的上引號『 置於文字的左上方！"
+    hint: "橫式書寫時，單引號的上引號『 置於說話內容第一個字的左上方！"
   }
 ];

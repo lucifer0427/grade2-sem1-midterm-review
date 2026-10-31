@@ -70,6 +70,7 @@ export class GameEngine {
     this.combo = 0;
     this.bases = [false, false, false];
     this.isFeverActive = false;
+    this.used5050ThisTurn = false;
 
     this.isAnimating = false;
     this.clock = new THREE.Clock();
@@ -159,9 +160,13 @@ export class GameEngine {
     this.clearTimers();
     this.isAnimating = false;
     this.isFeverActive = false;
+    this.used5050ThisTurn = false;
     this.field.isCrowdCheering = false;
     this.cameraMode = 'batting';
     this.currentMode = mode;
+
+    const modeSelect = document.getElementById('select-mode');
+    if (modeSelect) modeSelect.value = mode;
 
     this.score = 0;
     this.outs = 0;
@@ -213,22 +218,36 @@ export class GameEngine {
       wrongBtn.classList.add('hidden');
     }
 
-    // 更新技能按鈕可用狀態
+    // 更新技能按鈕可用狀態（球探透視卡每局僅限使用一次）
     const btn5050 = document.getElementById('btn-skill-5050');
     const btnFever = document.getElementById('btn-skill-fever');
-    if (btn5050) btn5050.disabled = this.coins < 20 || this.isAnimating;
+    if (btn5050) btn5050.disabled = this.coins < 20 || this.used5050ThisTurn || this.isAnimating;
     if (btnFever) {
       btnFever.disabled = this.coins < 40 || this.isFeverActive || this.isAnimating;
       btnFever.classList.toggle('active-fever', this.isFeverActive);
     }
   }
 
-  formatQuestionHTML(rawText) {
-    const escaped = rawText
+  escapeHTML(rawText) {
+    return String(rawText)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+  }
+
+  formatQuestionHTML(rawText) {
+    const escaped = this.escapeHTML(rawText);
     return escaped.replace(/\[([^\]]+)\]/g, '<span class="highlight-char">$1</span>');
+  }
+
+  getSpokenQuestionText(q) {
+    if (!q) return '';
+    // 多音字題型避免語音引擎直接把答案讀音念出來洩題
+    if (q.unit && q.unit.includes('多音字')) {
+      return `${q.subject}，${q.unit}。請看螢幕上的句子，選出重點框裡國字的正確注音！`;
+    }
+    const cleanQuestion = q.question.replace(/\[([^\]]+)\]/g, '$1');
+    return `${q.subject}，${cleanQuestion}`;
   }
 
   showBigBanner(mainText, statcastText = '', color = '#fef08a') {
@@ -260,6 +279,7 @@ export class GameEngine {
     }
 
     this.currentQuestionIdx = idx;
+    this.used5050ThisTurn = false;
     const q = this.questions[idx];
 
     // 依局數切換魔王投手與日/昏/夜球場天色 (0~2局:暴熊, 3~5局:忍蛙, 6~8局:巨龍)
@@ -289,7 +309,7 @@ export class GameEngine {
       btn.dataset.idx = optIdx;
       btn.innerHTML = `
         <span class="btn-zone">${directions[optIdx]} [${keys[optIdx]}]</span>
-        <span class="btn-text">${opt.text}</span>
+        <span class="btn-text">${this.escapeHTML(opt.text)}</span>
       `;
       btn.onclick = () => this.handleSwing(opt, optIdx);
       optionsContainer.appendChild(btn);
@@ -297,7 +317,7 @@ export class GameEngine {
 
     this.resetPositions();
     this.updateScoreboardUI();
-    soundCtrl.speakText(`${q.subject}，${q.question}`);
+    soundCtrl.speakText(this.getSpokenQuestionText(q));
   }
 
   resetPositions() {
@@ -313,9 +333,9 @@ export class GameEngine {
     this.field.batGroup.rotation.set(Math.PI / 7, 0, -Math.PI / 5);
   }
 
-  // 使用「🕵️ 球探透視卡」刪去一個錯誤選項
+  // 使用「🕵️ 球探透視卡」刪去一個錯誤選項（每題限用一次）
   useScout5050Skill() {
-    if (this.coins < 20 || this.isAnimating) return;
+    if (this.coins < 20 || this.used5050ThisTurn || this.isAnimating) return;
     const q = this.questions[this.currentQuestionIdx];
     const buttons = Array.from(document.querySelectorAll('.batting-btn'));
 
@@ -324,12 +344,12 @@ export class GameEngine {
     if (wrongBtns.length === 0) return;
 
     this.coins -= 20;
+    this.used5050ThisTurn = true;
     this.savePlayerData();
 
     const targetBtn = wrongBtns[Math.floor(Math.random() * wrongBtns.length)];
     targetBtn.disabled = true;
     targetBtn.classList.add('eliminated-opt');
-    document.getElementById('btn-skill-5050').disabled = true;
 
     soundCtrl.playPitchSound();
     this.updateScoreboardUI();
@@ -656,7 +676,7 @@ export class GameEngine {
   setupEvents() {
     document.getElementById('btn-speak').onclick = () => {
       const q = this.questions[this.currentQuestionIdx];
-      if (q) soundCtrl.speakText(`${q.subject}，${q.question}`);
+      if (q) soundCtrl.speakText(this.getSpokenQuestionText(q));
     };
 
     const muteBtn = document.getElementById('btn-mute');

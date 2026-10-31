@@ -489,7 +489,7 @@ export class BaseballField {
   resetBatterToBox() {
     this.activeRunningAnim = null;
     this.batterGroup.position.set(-1.25, 0, 27.5);
-    this.batterGroup.rotation.y = Math.PI / 2.2;
+    this.batterGroup.rotation.set(0, Math.PI / 2.2, 0);
   }
 
   createFielders() {
