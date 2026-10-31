@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>國小二年級期中考 3D 棒球大對決</title>
+  <link rel="stylesheet" href="./css/style.css">
+
+  <!-- 原生 Import Map 免裝 node_modules，秒開且防死鎖 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://esm.sh/three@0.170.0",
+      "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.4"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- 3D 棒球場渲染畫布容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- 頂部 Jumbotron 棒球計分板 -->
+  <div id="jumbotron-hud">
+    <div class="scoreboard-top">
+      <div class="inning-badge" id="hud-inning">第 1 局上</div>
+      <div class="score-stats">
+        <span>得分: <b id="hud-score">0</b></span>
+        <span>出局數: <b id="hud-strikes">-</b></span>
+      </div>
+      <div class="hud-controls">
+        <button class="hud-btn" id="btn-speak">📢 朗讀題目</button>
+        <button class="hud-btn" id="btn-mute">🔊 音效開</button>
+      </div>
+    </div>
+    <div class="question-box">
+      <div id="hud-subject">【國語】第一課 新學年新希望</div>
+      <div id="hud-question">載入題目中...</div>
+      <div id="hud-phonetic"></div>
+    </div>
+  </div>
+
+  <!-- 底部打擊選擇區 (左中右外野三大揮棒按鍵) -->
+  <div id="batting-controls">
+    <div id="options-container"></div>
+  </div>
+
+  <!-- 單題反饋彈窗 (全壘打 / 好球揮空) -->
+  <div id="feedback-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2 class="modal-title" id="feedback-title">💥 全壘打 HOME RUN！</h2>
+      <div class="modal-msg" id="feedback-msg">打擊詳情</div>
+      <button class="action-btn" id="btn-next">下一球 ⚾</button>
+    </div>
+  </div>
+
+  <!-- 賽後 MVP 個人化卡片結算彈窗 -->
+  <div id="final-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2 class="modal-title" style="color: #f59e0b;">🏆 期中考 MVP 選手卡</h2>
+      <p style="color: #94a3b8; font-size: 15px;">全場 9 局賽事完成！這是你的打擊數據：</p>
+      
+      <div class="mvp-stats">
+        <div class="stat-item">
+          <span class="stat-label">打擊率 (AVG)</span>
+          <span class="stat-val" id="final-avg">.000</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">全壘打 (HR)</span>
+          <span class="stat-val" id="final-hr">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">總得分 (R)</span>
+          <span class="stat-val" id="final-score">0</span>
+        </div>
+      </div>
+
+      <button class="action-btn" id="btn-restart">再打一場 🔄</button>
+    </div>
+  </div>
+
+  <!-- 程式進入點 -->
+  <script type="module">
+    import { GameEngine } from './js/game.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      new GameEngine();
+    });
+  </script>
+</body>
+</html>
