@@ -110,15 +110,26 @@
   <script type="module">
     import { RobloxGameEngine } from './js/robloxGame.js';
 
-    window.addEventListener('DOMContentLoaded', () => {
-      window.gameEngine = new RobloxGameEngine();
-
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(err => {
-          console.warn('ServiceWorker 註冊失敗:', err);
-        });
+    function initGame() {
+      if (window.gameEngine) return;
+      try {
+        window.gameEngine = new RobloxGameEngine();
+      } catch (err) {
+        console.error('Roblox 遊戲引擎啟動異常:', err);
       }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initGame);
+    } else {
+      initGame();
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>

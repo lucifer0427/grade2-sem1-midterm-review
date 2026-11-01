@@ -11,8 +11,8 @@ import { escapeHTML } from './gameLogic.js';
 
 // 1. 霓虹雷射斷尺測量跑道 (Laser Tape Measure)
 export function renderLaserRulerWidget(container, question, onStepSound) {
-  if (!container) return;
-  const match = question.question.match(/\[(\d+)\s*公分\][^\d]*\[(\d+)\s*公分\]/);
+  if (!container || !question) return;
+  const match = question.question.match(/(?:刻度|\[刻度)?\s*(\d+)\s*(?:公分)?\]?[^\d]+(?:刻度|\[刻度)?\s*(\d+)\s*(?:公分)?\]?/);
   if (!match) {
     container.classList.add('hidden');
     container.innerHTML = '';
@@ -21,7 +21,7 @@ export function renderLaserRulerWidget(container, question, onStepSound) {
 
   const startCm = parseInt(match[1], 10);
   const endCm = parseInt(match[2], 10);
-  const actualLen = endCm - startCm;
+  const actualLen = Math.abs(endCm - startCm);
 
   container.classList.remove('hidden');
   container.innerHTML = `
@@ -117,8 +117,9 @@ export function renderTrampolineChainWidget(container, question, onStep1Correct)
 }
 
 // 3. 探照燈暗影實驗室 (Searchlight Shadow Lab)
-export function renderSearchlightShadowWidget(container, onLightChange) {
+export function renderSearchlightShadowWidget(container, questionOrCb, onLightChange) {
   if (!container) return;
+  const cb = typeof onLightChange === 'function' ? onLightChange : (typeof questionOrCb === 'function' ? questionOrCb : null);
 
   container.classList.remove('hidden');
   container.innerHTML = `
@@ -175,7 +176,7 @@ export function renderSearchlightShadowWidget(container, onLightChange) {
       shadow.style.height = '24px';
       tip.textContent = '💡 手電筒越靠近積木人，擋住的光線越多，影子變得越大！';
     }
-    if (onLightChange) onLightChange(mode);
+    if (cb) cb(mode);
   };
 
   buttons.forEach(btn => {

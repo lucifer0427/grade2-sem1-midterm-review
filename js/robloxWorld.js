@@ -357,9 +357,62 @@ export class RobloxWorld {
 
   setPetCompanion(petId) {
     if (!this.petModels) return;
+    const key = (petId || '').replace(/^pet_/, '');
     Object.keys(this.petModels).forEach(k => {
-      this.petModels[k].visible = (k === petId);
+      this.petModels[k].visible = (k === key || k === petId);
     });
+  }
+
+  // 裝備特技齒輪道具
+  equipGear(gearId) {
+    if (!this.playerGroup) return;
+    if (gearId === 'rainbow_halo') {
+      if (this.halo) this.halo.visible = true;
+      if (this.gravityCoil) this.gravityCoil.visible = false;
+    } else if (gearId === 'coil_gravity') {
+      if (this.halo) this.halo.visible = false;
+      if (this.gravityCoil) this.gravityCoil.visible = true;
+    } else {
+      if (this.halo) this.halo.visible = false;
+      if (this.gravityCoil) this.gravityCoil.visible = true;
+    }
+  }
+
+  // 更新 3D 神塔自由建造裝飾
+  updateTowerDecorations(builds = []) {
+    if (!this.towerDecorGroup) {
+      this.towerDecorGroup = new THREE.Group();
+      this.scene.add(this.towerDecorGroup);
+    }
+  }
+
+  // 重設至起點
+  resetToStart() {
+    this.setPlayerToStage(0);
+  }
+
+  // 跳躍至下一個 Checkpoint 平台 (alias)
+  jumpToNextPlatform(targetStage, onComplete) {
+    const clampedStage = Math.max(0, Math.min(this.totalStages - 1, targetStage));
+    this.jumpToNextStage(clampedStage, onComplete);
+  }
+
+  // 播放彩帶粒子
+  playConfetti() {
+    if (this.playerGroup) {
+      this.spawnConfettiSparks(this.playerGroup.position);
+    }
+  }
+
+  // 跌倒並重生 (alias)
+  playOofAndRespawn(onComplete) {
+    this.triggerOofDeath(onComplete);
+  }
+
+  // 每幀更新動畫主入口
+  update(delta = 0.016) {
+    this.animTime = (this.animTime || 0) + delta;
+    this.updateEffects(this.animTime);
   }
 
   setPlayerAvatarSkin(skinId) {
@@ -526,7 +579,7 @@ export class RobloxWorld {
     }
 
     // 平滑第三人稱跟隨攝影機 (Smooth Follow Cam)
-    if (this.playerGroup) {
+    if (this.camera && this.playerGroup) {
       const targetP = this.playerGroup.position;
       const camOffset = new THREE.Vector3(
         targetP.x * 0.6 + Math.sin(time * 0.15) * 4,

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'g2-midterm-3d-v6';
+const CACHE_NAME = 'g2-midterm-3d-v7';
 
 const CORE_ASSETS = [
   './',

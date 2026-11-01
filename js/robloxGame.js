@@ -101,7 +101,7 @@ export class RobloxGameEngine {
     this.clock = new THREE.Clock();
 
     this.initThree();
-    this.world = new RobloxWorld(this.scene);
+    this.world = new RobloxWorld(this.scene, this.camera);
     this.world.equipGear(this.equippedGear);
     this.world.setPetCompanion(this.equippedPet);
     this.world.updateTowerDecorations(this.unlockedBuilds);
@@ -222,13 +222,13 @@ export class RobloxGameEngine {
     // 抽題邏輯
     let rawQuestions = [];
     if (mode === 'mistakes') {
-      const mistakeList = [...this.wrongQuestionIds].map(id => QUESTION_MAP[id]).filter(Boolean);
-      rawQuestions = mistakeList.length > 0 ? mistakeList : getGameQuestions('all', 9);
+      const mistakeList = [...this.wrongQuestionIds].map(id => QUESTION_MAP.get(id)).filter(Boolean);
+      rawQuestions = mistakeList.length > 0 ? mistakeList : getGameQuestions('all', 9, this.seenQuestionIds);
     } else {
       rawQuestions = getGameQuestions(mode, 9, this.seenQuestionIds);
     }
 
-    this.questions = shuffleArray(rawQuestions).slice(0, 9);
+    this.questions = rawQuestions;
     this.currentQuestionIdx = 0;
 
     // 重設 3D 世界
@@ -277,7 +277,7 @@ export class RobloxGameEngine {
     const specialContainer = document.getElementById('special-mode-container');
 
     if (qBadgeEl) {
-      qBadgeEl.textContent = `[${q.subject}] ${q.category} (第 ${this.currentQuestionIdx + 1} / ${this.questions.length} 關)`;
+      qBadgeEl.textContent = `[${q.subject}] ${q.unit || q.category || ''} (第 ${this.currentQuestionIdx + 1} / ${this.questions.length} 關)`;
       qBadgeEl.className = `category-badge category-${q.categoryKey || 'default'}`;
     }
 
@@ -814,47 +814,70 @@ export class RobloxGameEngine {
       this.openGearShopModal();
     });
 
+  openPetBuildModal(lastWonPet = null) {
+    openPetAndBuildModal({
+      edition: 'roblox',
+      currency: this.robuxCoins,
+      unlockedPets: this.unlockedPets,
+      equippedPet: this.equippedPet,
+      unlockedBuilds: this.unlockedBuilds,
+      lastWonPet,
+      onPullGacha: (wonPet, cost) => {
+        this.robuxCoins -= cost;
+        this.unlockedPets.push(wonPet.id);
+        this.equippedPet = wonPet.id;
+        this.savePlayerSave();
+        this.world.setPetCompanion(wonPet.id);
+        this.updateHUD();
+        this.openPetBuildModal(wonPet);
+      },
+      onEquipPet: petId => {
+        this.equippedPet = petId;
+        this.savePlayerSave();
+        this.world.setPetCompanion(petId);
+        this.updateHUD();
+        this.openPetBuildModal();
+      },
+      onBuyBuild: buildItem => {
+        this.robuxCoins -= buildItem.price;
+        this.unlockedBuilds.push(buildItem.id);
+        this.savePlayerSave();
+        this.world.updateTowerDecorations(this.unlockedBuilds);
+        this.updateHUD();
+        this.openPetBuildModal();
+      }
+    });
+  }
+
+  // ----------------------------------------------------
+  // 11. 全局事件監聽
+  // ----------------------------------------------------
+  setupEvents() {
+    // 鍵盤 A / S / D 答題
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const key = e.key.toUpperCase();
+      let optIdx = -1;
+      if (key === 'A') optIdx = 0;
+      else if (key === 'S') optIdx = 1;
+      else if (key === 'D') optIdx = 2;
+
+      if (optIdx !== -1 && !this.eliminatedIndices.has(optIdx)) {
+        const q = this.questions[this.currentQuestionIdx];
+        if (q && q.options[optIdx]) {
+          this.handleAnswer(q.options[optIdx], optIdx);
+        }
+      }
+    });
+
+    // 商店按鈕
+    document.getElementById('btn-open-gear-shop')?.addEventListener('click', () => {
+      this.openGearShopModal();
+    });
+
     // 盲盒與神塔建造按鈕
     document.getElementById('btn-open-pet-build')?.addEventListener('click', () => {
-      openPetAndBuildModal({
-        edition: 'roblox',
-        currency: this.robuxCoins,
-        unlockedPets: this.unlockedPets,
-        equippedPet: this.equippedPet,
-        unlockedBuilds: this.unlockedBuilds,
-        onPullGacha: (wonPet, cost) => {
-          this.robuxCoins -= cost;
-          this.unlockedPets.push(wonPet.id);
-          this.equippedPet = wonPet.id;
-          this.savePlayerSave();
-          this.world.setPetCompanion(wonPet.id);
-          this.updateHUD();
-          openPetAndBuildModal({
-            edition: 'roblox',
-            currency: this.robuxCoins,
-            unlockedPets: this.unlockedPets,
-            equippedPet: this.equippedPet,
-            unlockedBuilds: this.unlockedBuilds,
-            lastWonPet: wonPet,
-            onPullGacha: this.openPetModalPull,
-            onEquipPet: this.openPetModalEquip,
-            onBuyBuild: this.openPetModalBuild
-          });
-        },
-        onEquipPet: petId => {
-          this.equippedPet = petId;
-          this.savePlayerSave();
-          this.world.setPetCompanion(petId);
-          this.updateHUD();
-        },
-        onBuyBuild: buildItem => {
-          this.robuxCoins -= buildItem.price;
-          this.unlockedBuilds.push(buildItem.id);
-          this.savePlayerSave();
-          this.world.updateTowerDecorations(this.unlockedBuilds);
-          this.updateHUD();
-        }
-      });
+      this.openPetBuildModal();
     });
 
     // 科目單元選單切換
