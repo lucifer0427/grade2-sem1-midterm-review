@@ -1,0 +1,654 @@
+/* ==========================================================================
+   Roblox 極限跑酷障礙闖關版 (Roblox Obby Edition) - 專屬樣式
+   特色：霓虹發光、亮面積木塑料感 (Plastic Gloss)、Checkpoint 進度條、電視實況轉播 HUD
+   ========================================================================== */
+
+:root {
+  --roblox-bg: #070a13;
+  --roblox-panel-bg: rgba(15, 23, 42, 0.88);
+  --roblox-border: #38bdf8;
+  --roblox-neon-blue: #00f2fe;
+  --roblox-neon-green: #06d6a0;
+  --roblox-neon-yellow: #facc15;
+  --roblox-neon-red: #ff2a6d;
+  --roblox-neon-purple: #c084fc;
+  --roblox-robux-gold: #ffd166;
+  --roblox-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--roblox-bg);
+  font-family: var(--roblox-font);
+  color: #ffffff;
+}
+
+/* 3D 跑酷畫布容器 */
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ==========================================================================
+   頂部 HUD 與 Checkpoint 進度條
+   ========================================================================== */
+#roblox-hud-top {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 96%;
+  max-width: 1120px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 進度條容器 */
+.checkpoint-bar-wrap {
+  width: 100%;
+  height: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+.checkpoint-progress-fill {
+  width: 11%;
+  height: 100%;
+  background: linear-gradient(90deg, #00f2fe, #06d6a0);
+  box-shadow: 0 0 10px #00f2fe;
+  transition: width 0.4s ease-out;
+}
+
+/* HUD 狀態條 */
+.roblox-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--roblox-panel-bg);
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.roblox-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roblox-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.stage-badge {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #fff;
+  border-color: #38bdf8;
+}
+
+.robux-badge {
+  background: linear-gradient(135deg, #854d0e, #a16207);
+  color: var(--roblox-robux-gold);
+  border-color: #facc15;
+}
+
+.hearts-badge {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  letter-spacing: 2px;
+}
+
+.combo-badge-active {
+  background: linear-gradient(135deg, #dc2626, #f97316);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  animation: pulse-glow 1s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from { box-shadow: 0 0 6px #f97316; transform: scale(1); }
+  to { box-shadow: 0 0 16px #ef4444; transform: scale(1.05); }
+}
+
+/* 控制按鈕區 */
+.roblox-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.roblox-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #ffffff;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.roblox-nav-btn:hover {
+  background: #334155;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.btn-baseball {
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+}
+.btn-minecraft {
+  background: linear-gradient(135deg, #14532d, #15803d);
+}
+.btn-shop {
+  background: linear-gradient(135deg, #854d0e, #ca8a04);
+}
+.btn-pet {
+  background: linear-gradient(135deg, #701a75, #a21caf);
+}
+.btn-print {
+  background: linear-gradient(135deg, #0f766e, #0d9488);
+}
+
+.roblox-select {
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #0f172a;
+  color: #38bdf8;
+  border: 1px solid #38bdf8;
+  cursor: pointer;
+  outline: none;
+}
+
+/* ==========================================================================
+   中央題目卡片 (Question Card)
+   ========================================================================== */
+.roblox-question-card {
+  background: var(--roblox-panel-bg);
+  border: 2px solid rgba(56, 189, 248, 0.45);
+  border-radius: 14px;
+  padding: 12px 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+.q-category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.category-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #0369a1;
+  color: #e0f2fe;
+}
+
+.q-text-content {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.45;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   學科特殊機關 (Special Widget Container)
+   ========================================================================== */
+.special-widget-active {
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1.5px dashed rgba(56, 189, 248, 0.4);
+  border-radius: 10px;
+}
+
+/* 霓虹雷射尺 */
+.laser-ruler-board {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  background: #0a0f1d;
+  border-radius: 10px;
+}
+
+.laser-ruler-track {
+  position: relative;
+  height: 36px;
+  background: #1e293b;
+  border: 2px solid #38bdf8;
+  border-radius: 6px;
+  box-shadow: inset 0 0 10px rgba(0, 242, 254, 0.3);
+}
+
+.laser-tick {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 12px;
+  background: #64748b;
+  transform: translateX(-50%);
+}
+.laser-tick.major {
+  height: 20px;
+  background: #38bdf8;
+}
+.laser-tick-num {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+}
+
+.laser-target-block {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: linear-gradient(90deg, #ff2a6d, #f43f5e);
+  border: 2px solid #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 12px #ff2a6d;
+}
+
+/* 雙重彈簧跳床連鎖 */
+.trampoline-chain-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px;
+}
+
+.trampoline-step-pod {
+  background: #1e293b;
+  border: 2px solid #38bdf8;
+  border-radius: 10px;
+  padding: 8px 14px;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+.trampoline-arrow {
+  font-size: 22px;
+  color: #facc15;
+  animation: bounce-right 0.8s infinite alternate;
+}
+
+@keyframes bounce-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(6px); }
+}
+
+/* 暗影迷宮 */
+.shadow-lab-board {
+  text-align: center;
+  padding: 8px;
+}
+
+.shadow-canvas-wrap {
+  position: relative;
+  width: 260px;
+  height: 120px;
+  margin: 0 auto 6px;
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   底部三選一選項區 (Options Container)
+   ========================================================================== */
+#roblox-controls-bottom {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 96%;
+  max-width: 860px;
+  z-index: 10;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease;
+}
+
+.option-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: #00f2fe;
+  box-shadow: 0 8px 24px rgba(0, 242, 254, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+.option-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.option-btn.eliminated {
+  opacity: 0.35;
+  filter: grayscale(1);
+  border-color: #475569;
+  cursor: not-allowed;
+}
+
+.option-key-badge {
+  display: inline-block;
+  background: #0284c7;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.option-text {
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.35;
+}
+
+/* ==========================================================================
+   彈窗與遮罩層 (Modals & Overlays)
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(3, 7, 18, 0.82);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-card {
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 540px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), 0 0 24px rgba(56, 189, 248, 0.3);
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #0284c7;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.6);
+}
+
+/* 蘇格拉底三階段教官視窗 */
+.socratic-roblox-card {
+  text-align: left;
+  max-width: 580px;
+}
+
+.coach-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1.5px solid rgba(56, 189, 248, 0.3);
+  padding-bottom: 10px;
+}
+
+.coach-avatar {
+  font-size: 36px;
+}
+
+.coach-box {
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border-left: 4px solid #38bdf8;
+}
+
+.coach-box.diagnosis-box {
+  border-left-color: #ef4444;
+}
+.coach-box.question-box {
+  border-left-color: #facc15;
+}
+.coach-box.tip-box {
+  border-left-color: #10b981;
+}
+
+.box-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.box-content {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #f8fafc;
+}
+
+/* 商店網格 */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+  text-align: left;
+}
+
+.shop-item {
+  background: #1e293b;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.shop-item.equipped {
+  border-color: #facc15;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
+}
+
+.shop-item-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 4px;
+}
+
+.shop-item-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.shop-buy-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  background: #facc15;
+  border: none;
+  cursor: pointer;
+}
+
+.shop-buy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #64748b;
+  color: #fff;
+}
+
+/* 飄浮訊息橫幅 */
+.toast-banner-active {
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  border: 2px solid #38bdf8;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5);
+  animation: slide-down 0.3s ease-out;
+}
+
+@keyframes slide-down {
+  from { top: 50px; opacity: 0; }
+  to { top: 75px; opacity: 1; }
+}
+
+/* 結算卡片數值 */
+.result-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.stat-box {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 900;
+  color: #facc15;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* 通用隱藏 */
+.hidden {
+  display: none !important;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+  #roblox-hud-top {
+    width: 98%;
+  }
+  .q-text-content {
+    font-size: 16px;
+  }
+  .options-grid {
+    gap: 8px;
+  }
+  .option-btn {
+    padding: 10px 6px;
+  }
+  .option-text {
+    font-size: 14px;
+  }
+}

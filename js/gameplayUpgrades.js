@@ -164,6 +164,63 @@ export const MC_BASE_BUILDS = [
 ];
 
 // ==========================================
+// 3. 🟥 Roblox 版：3D 寵物盲盒與跑酷天梯設施目錄
+// ==========================================
+export const ROBLOX_PETS = [
+  {
+    id: 'doge',
+    name: '🐶 經典柴犬 Doge',
+    icon: '🐶',
+    rarity: 'SR',
+    desc: '浮空跟隨在積木人身旁的經典柴犬！每次跳躍成功銜回 +15 R$ 蘿蔔幣！',
+    bonusRobux: 15,
+    qteBonus: 0
+  },
+  {
+    id: 'cat',
+    name: '🐱 霓虹貓 Bloxy Cat',
+    icon: '🐱',
+    rarity: 'SSR',
+    desc: '自帶霓虹光環的粉紅積木貓！彈簧 QTE 完美區擴大 30%，每次過關 +20 R$！',
+    bonusRobux: 20,
+    qteBonus: 0.3
+  },
+  {
+    id: 'gold_blox',
+    name: '👑 黃金方塊之王',
+    icon: '👑',
+    rarity: 'UR',
+    desc: '傳奇純金打造的浮空方塊皇冠！每次過關獎金 +35 R$，彈簧跳躍完美區翻倍！',
+    bonusRobux: 35,
+    qteBonus: 0.5
+  }
+];
+
+export const ROBLOX_TOWER_BUILDS = [
+  {
+    id: 'neon_beacon',
+    name: '🗼 霓虹避雷針天線塔',
+    price: 60,
+    desc: '在天梯旁樹立賽博霓虹發報塔！每次過關自動發送 +10 R$ 贊助獎勵！',
+    bonusRobux: 10
+  },
+  {
+    id: 'bloxy_statue',
+    name: '🗽 巨型 Noob 黃金雕像',
+    price: 110,
+    desc: '在天梯起點矗立高聳的 Noob 積木人金像！每過 1 關賞金追加 +20 R$！',
+    bonusRobux: 20
+  },
+  {
+    id: 'sky_roller',
+    name: '🎢 雲霄高空飛車軌道',
+    price: 180,
+    desc: '環繞整座跑酷塔的空中過山車！全場每題過關額外分紅 +30 R$ 蘿蔔幣！',
+    bonusRobux: 30
+  }
+];
+
+// ==========================================
 // 3. 🃏 Roguelike 肉鴿三選一神裝天賦卡池
 // ==========================================
 export const BASEBALL_ROGUELIKE_CARDS = [
@@ -244,6 +301,39 @@ export const MC_ROGUELIKE_CARDS = [
   }
 ];
 
+export const ROBLOX_ROGUELIKE_CARDS = [
+  {
+    id: 'speed_coil',
+    icon: '⚡',
+    name: '疾速紅彈簧 Speed Coil',
+    desc: '跑酷跳躍加速 +50%，手動彈簧 QTE「黃金綠區」擴大為 2 倍！'
+  },
+  {
+    id: 'bloxy_cola',
+    icon: '🥤',
+    name: 'Bloxy 能量可樂',
+    desc: '本場冒險接下來每過一關，額外咕嚕咕嚕喝下 +25 R$ 蘿蔔幣！'
+  },
+  {
+    id: 'rainbow_carpet',
+    icon: '🌈',
+    name: '彩虹飛行魔毯',
+    desc: '獲得 1 層免死幽靈護盾（即使第一次答錯也不跌落觸發 OOF，直接原地復活）！'
+  },
+  {
+    id: 'gravity_spring',
+    icon: '🌀',
+    name: '究極重力彈簧 Gravity Coil',
+    desc: '本場跳躍高度翻倍，答對直接啟動「高空二連跳」！'
+  },
+  {
+    id: 'radar_glasses',
+    icon: '👓',
+    name: '透視偵察眼鏡',
+    desc: '接下來 2 關進場時，自動用雷射免費識破並刪除 1 個錯誤答案！'
+  }
+];
+
 // ==========================================
 // 4. 👾 隨機亂入突發事件產生器
 // ==========================================
@@ -305,7 +395,31 @@ export function rollRandomEncounter(edition = 'baseball', questionIdx = 0) {
     }
   ];
 
-  const pool = edition === 'baseball' ? baseballEvents : mcEvents;
+  const robloxEvents = [
+    {
+      id: 'golden_bloxy',
+      title: '🏆 突發事件：黃金 Bloxy 獎座降臨！',
+      desc: '這座跳台有官方認證贊助，通關直接空投 2 倍 R$ 蘿蔔幣大紅包！',
+      robuxMultiplier: 2,
+      blitzSeconds: 0
+    },
+    {
+      id: 'speed_blitz',
+      title: '⚡ 限時懸賞：15 秒閃電極限跑酷！',
+      desc: '15 秒內踏破機關，額外加發 +35 R$ 蘿蔔幣（超時不扣分）！',
+      robuxMultiplier: 1,
+      blitzSeconds: 15
+    },
+    {
+      id: 'super_coil',
+      title: '🌀 突發事件：重力彈簧狂暴充能！',
+      desc: '跳台充滿高壓霓虹能量，跳躍高度狂飆 +100% 直衝天際！',
+      robuxMultiplier: 1,
+      blitzSeconds: 0
+    }
+  ];
+
+  const pool = edition === 'baseball' ? baseballEvents : edition === 'roblox' ? robloxEvents : mcEvents;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -531,6 +645,117 @@ export function runMinecraftMiningRush({ hasHaste = false, petClickBonus = 0, on
 }
 
 // ==========================================
+// 6.5 🌀 Roblox 版：答對後「極限彈簧蓄力起跳 QTE (Spring Coil Jump)」
+// ==========================================
+export function runRobloxSpringQTE({ hasGravityCoil = false, petJumpBonus = 0, onBounceSound, onComplete }) {
+  let overlay = document.getElementById('action-qte-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'action-qte-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  let resolved = false;
+  let animId = null;
+  let progress = 0;
+  let direction = 1;
+  const speed = hasGravityCoil ? 2.2 : 2.8;
+  const sweetMin = 70 - (petJumpBonus ? 10 : 0);
+  const sweetMax = 90 + (petJumpBonus ? 6 : 0);
+
+  overlay.className = 'action-qte-active';
+  overlay.innerHTML = `
+    <div class="qte-modal-card roblox-qte-card">
+      <div class="qte-badge" style="background: linear-gradient(135deg, #06b6d4, #3b82f6); color: #fff;">
+        🚀 OBBY 彈簧跳躍蓄力 (SPRING COIL)
+      </div>
+      <h3 style="color: #facc15; font-size: 20px; margin: 8px 0 4px; text-shadow: 0 0 10px rgba(250,204,21,0.6);">
+        抓準指針進入【黃金綠區】時按下起跳！
+      </h3>
+      <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 12px;">
+        完美起跳將觸發超重力螺旋沖天，跳過前方危險雷射！
+      </p>
+
+      <div class="roblox-qte-spring-icon" id="roblox-spring-icon">🌀</div>
+
+      <div class="roblox-meter-container" style="position: relative; width: 280px; height: 32px; background: #0f172a; border: 3px solid #38bdf8; border-radius: 16px; margin: 0 auto 16px; overflow: hidden; box-shadow: 0 0 16px rgba(56,189,248,0.4);">
+        <!-- 甜蜜區 -->
+        <div style="position: absolute; left: ${sweetMin}%; width: ${sweetMax - sweetMin}%; height: 100%; background: linear-gradient(90deg, #10b981, #facc15); opacity: 0.85;"></div>
+        <!-- 指針 -->
+        <div id="roblox-meter-needle" style="position: absolute; left: 0%; top: 0; bottom: 0; width: 8px; background: #ffffff; border-radius: 4px; box-shadow: 0 0 10px #ffffff, 0 0 20px #38bdf8; transform: translateX(-50%);"></div>
+      </div>
+
+      <button type="button" class="action-btn" id="btn-roblox-jump" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0f172a; font-size: 20px; font-weight: 900; padding: 12px 32px; border-radius: 30px; box-shadow: 0 0 20px rgba(0,242,254,0.6); border: none; cursor: pointer;">
+        🚀 彈簧起跳！ (空白鍵 Space)
+      </button>
+    </div>
+  `;
+
+  const needle = document.getElementById('roblox-meter-needle');
+  const springIcon = document.getElementById('roblox-spring-icon');
+  const jumpBtn = document.getElementById('btn-roblox-jump');
+
+  const finishJump = () => {
+    if (resolved) return;
+    resolved = true;
+    if (animId) cancelAnimationFrame(animId);
+    window.removeEventListener('keydown', keyHandler);
+
+    let rating = 'GOOD';
+    let bonusRobux = 10;
+    let leapPower = 0;
+    let label = '🌀 穩健起跳 (+10 R$)';
+
+    if (progress >= sweetMin && progress <= sweetMax) {
+      rating = 'PERFECT';
+      bonusRobux = 35;
+      leapPower = 2;
+      label = '👑 PERFECT 超重力螺旋沖天！(+35 R$・直接滑翔跳躍)';
+    } else if (progress >= sweetMin - 18 && progress <= sweetMax + 10) {
+      rating = 'GREAT';
+      bonusRobux = 20;
+      leapPower = 1;
+      label = '🔥 GREAT 強勁彈簧大跳！(+20 R$・高速推進)';
+    }
+
+    if (onBounceSound) onBounceSound(rating === 'PERFECT');
+    overlay.className = 'hidden';
+    overlay.innerHTML = '';
+    onComplete({ rating, bonusRobux, leapPower, label });
+  };
+
+  const keyHandler = (e) => {
+    if (e.code === 'Space' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      finishJump();
+    }
+  };
+  window.addEventListener('keydown', keyHandler);
+  if (jumpBtn) jumpBtn.onclick = () => finishJump();
+
+  const tick = () => {
+    if (resolved) return;
+    progress += speed * direction;
+    if (progress >= 100) {
+      progress = 100;
+      direction = -1;
+    } else if (progress <= 0) {
+      progress = 0;
+      direction = 1;
+    }
+    if (needle) {
+      needle.style.left = `${progress}%`;
+    }
+    if (springIcon) {
+      const scaleY = 0.7 + (progress / 100) * 0.6;
+      springIcon.style.transform = `scaleY(${scaleY})`;
+    }
+    animId = requestAnimationFrame(tick);
+  };
+  animId = requestAnimationFrame(tick);
+}
+
+// ==========================================
 // 7. 🃏 Roguelike 三選一神裝天賦卡視窗
 // ==========================================
 export function openRoguelikeDraftModal({ edition = 'baseball', onSelectCard }) {
@@ -541,12 +766,18 @@ export function openRoguelikeDraftModal({ edition = 'baseball', onSelectCard }) 
     document.body.appendChild(modal);
   }
 
-  const pool = edition === 'baseball' ? BASEBALL_ROGUELIKE_CARDS : MC_ROGUELIKE_CARDS;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+  let pool = BASEBALL_ROGUELIKE_CARDS;
+  let titleText = '🃏 局間狂暴覺醒！選擇 1 張傳奇天賦卡';
 
-  const titleText = edition === 'baseball'
-    ? '🃏 局間狂暴覺醒！選擇 1 張傳奇天賦卡'
-    : '📜 魔王破防獎勵！選擇 1 張傳奇附魔卷軸';
+  if (edition === 'minecraft') {
+    pool = MC_ROGUELIKE_CARDS;
+    titleText = '📜 魔王破防獎勵！選擇 1 張傳奇附魔卷軸';
+  } else if (edition === 'roblox') {
+    pool = ROBLOX_ROGUELIKE_CARDS;
+    titleText = '🚀 跑酷突破極限！選擇 1 個超能齒輪特技';
+  }
+
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
 
   modal.className = 'modal-overlay';
   modal.innerHTML = `
@@ -601,18 +832,26 @@ export function renderFloatingTargetsOverlay({
     return;
   }
 
+  const bannerText = edition === 'baseball'
+    ? '🎈 飛天熱氣球靶心挑戰！直接點破空中飄動的正確氣球！'
+    : edition === 'minecraft'
+    ? '👾 飛天附魔方塊挑戰！直接點擊空中盤旋的正確礦石方塊！'
+    : '🌀 霓虹懸浮光標挑戰！直接點擊空中盤旋的正確通關積木！';
+
   layer.className = 'floating-targets-active';
   layer.innerHTML = `
     <div class="floating-mode-banner">
-      ${edition === 'baseball'
-        ? '🎈 飛天熱氣球靶心挑戰！直接點破空中飄動的正確氣球！'
-        : '👾 飛天附魔方塊挑戰！直接點擊空中盤旋的正確礦石方塊！'}
+      ${bannerText}
     </div>
     <div class="floating-targets-stage" id="floating-stage"></div>
   `;
 
   const stage = document.getElementById('floating-stage');
-  const icons = edition === 'baseball' ? ['🎈', '🛸', '🎯'] : ['💎', '🪙', '🟢'];
+  const icons = edition === 'baseball'
+    ? ['🎈', '🛸', '🎯']
+    : edition === 'minecraft'
+    ? ['💎', '🪙', '🟢']
+    : ['🌀', '⚡', '🏆'];
   const keys = ['A', 'S', 'D'];
 
   question.options.forEach((opt, idx) => {
@@ -660,10 +899,11 @@ export function openPetAndBuildModal({
   }
 
   const isBaseball = edition === 'baseball';
-  const currencyIcon = isBaseball ? '💰' : '🟢';
-  const currencyName = isBaseball ? '金幣' : '綠寶石';
-  const petsCatalog = isBaseball ? BASEBALL_PETS : MC_PETS;
-  const buildsCatalog = isBaseball ? BASEBALL_STADIUM_BUILDS : MC_BASE_BUILDS;
+  const isMinecraft = edition === 'minecraft';
+  const currencyIcon = isBaseball ? '💰' : isMinecraft ? '🟢' : '🪙';
+  const currencyName = isBaseball ? '金幣' : isMinecraft ? '綠寶石' : 'R$ 蘿蔔幣';
+  const petsCatalog = isBaseball ? BASEBALL_PETS : isMinecraft ? MC_PETS : ROBLOX_PETS;
+  const buildsCatalog = isBaseball ? BASEBALL_STADIUM_BUILDS : isMinecraft ? MC_BASE_BUILDS : ROBLOX_TOWER_BUILDS;
   const gachaPrice = 50;
   const allPetsOwned = unlockedPets.length >= petsCatalog.length;
 
@@ -671,7 +911,13 @@ export function openPetAndBuildModal({
   modal.innerHTML = `
     <div class="modal-card shop-card" style="max-width: 720px; max-height: 88vh; overflow-y: auto;">
       <h2 class="modal-title" style="color: #facc15;">
-        ${isBaseball ? '🥚 3D 寵物盲盒 ＆ 🎡 豪華球場擴建' : '🥚 3D 生物刷怪蛋 ＆ 🏰 麥塊家園建造'}
+        ${
+          isBaseball
+            ? '🥚 3D 寵物盲盒 ＆ 🎡 豪華球場擴建'
+            : isMinecraft
+            ? '🥚 3D 生物刷怪蛋 ＆ 🏰 麥塊家園建造'
+            : '🥚 3D 萌寵盲盒 ＆ 🗼 跑酷神塔自由組建'
+        }
       </h2>
       <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 10px;">
         目前擁有：<b style="color: #4ade80; font-size: 20px;">${currency} ${currencyIcon} ${currencyName}</b>
@@ -703,14 +949,20 @@ export function openPetAndBuildModal({
       </div>
       <div class="shop-grid" id="pets-grid-container"></div>
 
-      <!-- 3D 球場擴建 / 麥塊家園建造列表 -->
+      <!-- 3D 擴建/建造列表 -->
       <div style="text-align: left; font-weight: 900; color: #4ade80; margin: 14px 0 6px;">
-        ${isBaseball ? '🎡 3D 外野傳奇球場擴建（蓋好直接出現在外野！）：' : '🏰 3D 麥塊家園自由建造（蓋好直接佇立在礦區兩側！）：'}
+        ${
+          isBaseball
+            ? '🎡 3D 外野傳奇球場擴建（蓋好直接出現在外野！）：'
+            : isMinecraft
+            ? '🏰 3D 麥塊家園自由建造（蓋好直接佇立在礦區兩側！）：'
+            : '🗼 3D 螺旋神塔跑酷機關建造（蓋好直接屹立在通天賽道旁！）：'
+        }
       </div>
       <div class="shop-grid" id="builds-grid-container"></div>
 
       <button type="button" class="action-btn" id="btn-close-pet-build" style="margin-top: 14px;">
-        ${isBaseball ? '回到球場 ⚾' : '回到礦區 ⛏️'}
+        ${isBaseball ? '回到球場 ⚾' : isMinecraft ? '回到礦區 ⛏️' : '回到跑酷關卡 🚀'}
       </button>
     </div>
   `;

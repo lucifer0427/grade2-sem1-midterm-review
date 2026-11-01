@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>國小二年級期中考：3D Roblox 極限跑酷障礙闖關版 (Roblox Obby Edition)</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/roblox.css">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://esm.sh/three@0.170.0",
+      "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.4"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- 3D 跑酷畫布容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- 頂部 HUD 與 Checkpoint 進度條 -->
+  <div id="roblox-hud-top">
+    <!-- Checkpoint 進度條 -->
+    <div class="checkpoint-bar-wrap">
+      <div class="checkpoint-progress-fill" id="checkpoint-progress-fill"></div>
+    </div>
+
+    <!-- 狀態條 -->
+    <div class="roblox-status-bar">
+      <!-- 左側：關卡進度與貨幣 -->
+      <div class="roblox-pill-group">
+        <div class="roblox-badge stage-badge" id="hud-stage-text">🟢 第 1 關：新手起跑霓虹台</div>
+        <div class="roblox-badge robux-badge" id="hud-robux-count">100 R$</div>
+        <div class="roblox-badge hearts-badge" id="hud-hearts-container">❤️❤️❤️</div>
+        <div class="combo-badge-active hidden" id="hud-combo-badge">🔥 COMBO x0</div>
+      </div>
+
+      <!-- 右側：切換其他遊戲版本與功能面板 -->
+      <div class="roblox-controls">
+        <a href="./index.html" class="roblox-nav-btn btn-baseball" title="切換至 3D 實況棒球版">⚾ 棒球版</a>
+        <a href="./minecraft.html" class="roblox-nav-btn btn-minecraft" title="切換至 3D 麥塊方塊版">⛏️ 麥塊版</a>
+        <button type="button" class="roblox-nav-btn btn-shop" id="btn-open-gear-shop" title="購買跑酷特技齒輪">🛍️ 特技商店</button>
+        <button type="button" class="roblox-nav-btn btn-pet" id="btn-open-pet-build" title="抽取 3D 隨身神獸與擴建神塔">🥚 萌寵＆神塔</button>
+        <a href="./print-exam.html" target="_blank" class="roblox-nav-btn btn-print" title="列印 A4 紙本期中考卷">🖨️ 考卷列印</a>
+
+        <!-- 單元科目選擇 -->
+        <select id="unit-filter-select" class="roblox-select" title="選擇複習科目或單元">
+          <optgroup label="🏆 綜合與全科領域">
+            <option value="all">🚀 綜合極限跑酷 (150題)</option>
+            <option value="chinese">📖 康軒國語全範圍 (50題)</option>
+            <option value="math">🔢 翰林數學全範圍 (50題)</option>
+            <option value="life">🌱 生活課程全範圍 (50題)</option>
+          </optgroup>
+          <optgroup label="📖 康軒國語・題型專項">
+            <option value="chi_poly">🔤 國語：多音字辨析 (10題)</option>
+            <option value="chi_typo">🔍 國語：形近字與改錯 (10題)</option>
+            <option value="chi_radical">🧩 國語：部首與部件 (12題)</option>
+            <option value="chi_reading">📚 國語：第1~6課文意 (10題)</option>
+            <option value="chi_grammar">✍️ 國語：短語量詞與句型 (8題)</option>
+          </optgroup>
+          <optgroup label="🔢 翰林數學・單元專項">
+            <option value="math_u1">💯 數學U1：200以內的數 (12題)</option>
+            <option value="math_u2">➕ 數學U2：二位數加減法 (12題)</option>
+            <option value="math_u3">📏 數學U3：公分與斷尺 (10題)</option>
+            <option value="math_u4">🛤️ 數學U4：兩步驟應用 (10題)</option>
+            <option value="math_u5">📐 數學U5：平面圖形與直線 (6題)</option>
+          </optgroup>
+          <optgroup label="🌱 生活課程・主題專項">
+            <option value="life_u1">🍁 生活U1：秋天的觀察 (13題)</option>
+            <option value="life_u2">☀️ 生活U2：光與影子的遊戲 (15題)</option>
+            <option value="life_u3">🏘️ 生活U3：認識社區生活 (12題)</option>
+            <option value="life_u4">🛡️ 生活U4：校園安全與自理 (10題)</option>
+          </optgroup>
+          <optgroup label="🎯 弱點特訓">
+            <option value="mistakes">🎯 錯題專項跑酷衝刺</option>
+          </optgroup>
+        </select>
+
+        <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; cursor: pointer;">
+          <input type="checkbox" id="toggle-tts" checked> 📢 語音朗讀
+        </label>
+        <button type="button" class="roblox-nav-btn" id="btn-restart-game" title="重新開始">🔄 重開</button>
+      </div>
+    </div>
+
+    <!-- 中央題目卡片 -->
+    <div class="roblox-question-card">
+      <div class="q-category-row">
+        <span class="category-badge" id="q-category-badge">[國語] 課文文意理解</span>
+      </div>
+      <div class="q-text-content" id="q-text">正在載入題目...</div>
+
+      <!-- 學科專屬互動機關 (斷尺、兩步驟、光影) -->
+      <div id="special-mode-container" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- 底部三選一選項按鈕區 -->
+  <div id="roblox-controls-bottom">
+    <div class="options-grid" id="options-container">
+      <!-- 由 JS 動態注入三選一按鈕 -->
+    </div>
+  </div>
+
+  <!-- PWA Service Worker 註冊與遊戲引擎主程式啟動 -->
+  <script type="module">
+    import { RobloxGameEngine } from './js/robloxGame.js';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.gameEngine = new RobloxGameEngine();
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('ServiceWorker 註冊失敗:', err);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

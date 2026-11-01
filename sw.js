@@ -1,13 +1,15 @@
-const CACHE_NAME = 'g2-midterm-3d-v5';
+const CACHE_NAME = 'g2-midterm-3d-v6';
 
 const CORE_ASSETS = [
   './',
   './index.html',
   './minecraft.html',
+  './roblox.html',
   './print-exam.html',
   './manifest.json',
   './css/style.css',
   './css/minecraft.css',
+  './css/roblox.css',
   './js/game.js',
   './js/baseballField.js',
   './js/specialModes.js',
@@ -16,6 +18,10 @@ const CORE_ASSETS = [
   './js/minecraftWorld.js',
   './js/minecraftSpecialModes.js',
   './js/minecraftAudio.js',
+  './js/robloxGame.js',
+  './js/robloxWorld.js',
+  './js/robloxSpecialModes.js',
+  './js/robloxAudio.js',
   './js/gameplayUpgrades.js',
   './js/gameLogic.js',
   './js/curriculum.js',

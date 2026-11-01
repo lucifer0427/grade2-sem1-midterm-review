@@ -44,15 +44,18 @@ grade2-sem1-midterm-review/
 ├── AGENTS.md
 ├── DEVELOPMENT_PLAN.md
 ├── MINECRAFT_PLAN.md           # 麥塊體素版架構與獨立紀錄規劃文件
+├── ROBLOX_PLAN.md              # Roblox 跑酷版架構與獨立紀錄規劃文件
 ├── IMPROVEMENT_PLAN.md         # 專案工程改善與健全化維護計畫
 ├── index.html                  # [棒球版] 3D 實況棒球複習遊戲主頁面 (g2_baseball_*)
 ├── minecraft.html              # [麥塊版] 3D 麥塊體素複習遊戲主頁面 (g2_mc_*)
+├── roblox.html                 # [Roblox版] 3D Roblox 跑酷複習遊戲主頁面 (g2_roblox_*)
 ├── print-exam.html             # A4 紙本考卷動態組卷、列印器與弱點單元雷達分析儀
 ├── manifest.json               # PWA 應用程式清單設定
 ├── sw.js                       # PWA Service Worker 離線快取腳本
 ├── css/
 │   ├── style.css               # 棒球版遊戲與互動元件樣式
-│   └── minecraft.css           # 麥塊版像素 UI 與合成台元件樣式
+│   ├── minecraft.css           # 麥塊版像素 UI 與合成台元件樣式
+│   └── roblox.css              # Roblox 版霓虹跑酷 UI 與 Checkpoint 進度條
 ├── js/
 │   ├── game.js                 # [棒球版] 遊戲主迴圈與狀態管理
 │   ├── baseballField.js        # [棒球版] Three.js 3D 棒球場與人物特效
@@ -62,7 +65,11 @@ grade2-sem1-midterm-review/
 │   ├── minecraftWorld.js       # [麥塊版] Three.js 3D Voxel 引擎與三維度 Boss
 │   ├── minecraftSpecialModes.js# [麥塊版] 紅石活塞斷尺、礦車連鎖、麥塊日晷光影台、3x3 合成台與英雄卡匯出
 │   ├── minecraftAudio.js       # [麥塊版] 麥塊合成音效與語音朗讀
-│   ├── gameplayUpgrades.js     # [共用] 5.0 爽感升級模組 (揮棒/挖礦QTE、肉鴿天賦、飛天靶心、3D盲盒與建築)
+│   ├── robloxGame.js           # [Roblox版] 遊戲主迴圈與獨立狀態管理 (g2_roblox_*)
+│   ├── robloxWorld.js          # [Roblox版] Three.js 3D 螺旋跑酷塔、積木人與彩帶粒子
+│   ├── robloxSpecialModes.js   # [Roblox版] 雷射斷尺、雙重跳床、探照燈暗影台與 Bloxy 英雄卡
+│   ├── robloxAudio.js          # [Roblox版] 經典 OOF!、Coil 彈簧跳、Checkpoint 與語音合成
+│   ├── gameplayUpgrades.js     # [共用] 5.0 爽感升級模組 (揮棒/挖礦/彈簧QTE、肉鴿天賦、飛天靶心、3D盲盒與建築)
 │   ├── curriculum.js           # [共用] 150 題題庫匯總、18 種單元篩選與未讀優先抽題
 │   ├── guidedTeaching.js       # [共用] 蘇格拉底三階段引導式教學模組
 │   └── questions/

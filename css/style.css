@@ -288,6 +288,21 @@ body, html {
   background: #facc15;
 }
 
+.btn-mc {
+  background: linear-gradient(135deg, #15803d, #16a34a);
+  color: #fff;
+  border-color: #86efac;
+  text-decoration: none;
+}
+
+.btn-roblox {
+  background: linear-gradient(135deg, #0284c7, #00f2fe);
+  color: #0f172a;
+  border-color: #38bdf8;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .btn-wrong {
   background: #dc2626;
   border-color: #fca5a5;

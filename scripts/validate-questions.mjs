@@ -18,6 +18,7 @@ import {
 import { buildGuidedCoachingData } from '../js/guidedTeaching.js';
 import * as specialModes from '../js/specialModes.js';
 import * as mcSpecialModes from '../js/minecraftSpecialModes.js';
+import * as robloxSpecialModes from '../js/robloxSpecialModes.js';
 import {
   advanceRunners as testAdvanceRunners,
   evaluateHitBases as testEvaluateHitBases,
@@ -25,7 +26,7 @@ import {
   escapeHTML as testEscapeHTML
 } from '../js/gameLogic.js';
 
-console.log('⚾⛏️ 開始執行雙版本（棒球版 & 麥塊版）150 題庫結構、答案唯一性與引導教學遮罩率自動化檢測...\n');
+console.log('⚾⛏️🟥 開始執行三版本（棒球版、麥塊版 ＆ Roblox 跑酷版）150 題庫結構、答案唯一性與引導教學遮罩率自動化檢測...\n');
 
 // 1. 題數檢測
 assert.equal(CHINESE_QUESTIONS.length, 50, '康軒國語題庫必須剛好 50 題');
@@ -141,6 +142,11 @@ assert.equal(typeof mcSpecialModes.renderMcShadowLabWidget, 'function', '麥塊�
 assert.equal(typeof mcSpecialModes.renderCraftingTableGrid, 'function', '麥塊版缺少 renderCraftingTableGrid');
 assert.equal(typeof mcSpecialModes.generateAndDownloadMinecraftCard, 'function', '麥塊版缺少 generateAndDownloadMinecraftCard');
 
+assert.equal(typeof robloxSpecialModes.renderLaserRulerWidget, 'function', 'Roblox版缺少 renderLaserRulerWidget');
+assert.equal(typeof robloxSpecialModes.renderRobloxTrampolineWidget, 'function', 'Roblox版缺少 renderRobloxTrampolineWidget');
+assert.equal(typeof robloxSpecialModes.renderRobloxShadowWidget, 'function', 'Roblox版缺少 renderRobloxShadowWidget');
+assert.equal(typeof robloxSpecialModes.generateAndDownloadRobloxCard, 'function', 'Roblox版缺少 generateAndDownloadRobloxCard');
+
 // 6.1 核心跑壘與規則邏輯單元測試 (P1-4 gameLogic.js)
 const soloHr = testAdvanceRunners([false, false, false], 4);
 assert.equal(soloHr.runsScored, 1, '陽春全壘打得分應為 1');
@@ -180,6 +186,10 @@ const browserEntryModules = [
   'js/minecraftGame.js',
   'js/minecraftWorld.js',
   'js/minecraftAudio.js',
+  'js/robloxGame.js',
+  'js/robloxWorld.js',
+  'js/robloxAudio.js',
+  'js/robloxSpecialModes.js',
   'js/gameplayUpgrades.js',
   'js/gameLogic.js'
 ];
@@ -209,7 +219,7 @@ for (const mdRel of mdFiles) {
   assert.ok(content.length > 200, `${mdRel} 內容過短`);
   assert.ok(!content.includes('与'), `${mdRel} 發現簡體字「与」`);
 }
-console.log('✅ [6/7] 棒球版、麥塊版、PWA Service Worker、print-exam 18 專項與 8 份紙本教材檢驗全數通過');
+console.log('✅ [6/7] 棒球版、麥塊版、Roblox版、PWA Service Worker、print-exam 18 專項與 8 份紙本教材檢驗全數通過');
 
 // 7. 數學題庫數值算式自動化驗算（P1-3）
 let mathFormulaCount = 0;
@@ -248,4 +258,4 @@ for (const q of MATH_QUESTIONS) {
 }
 console.log(`✅ [7/7] 數學題庫全部 ${mathFormulaCount} 條進退位與兩步驟算式自動化驗算 100% 正確\n`);
 
-console.log('🎉 全部 150 題與雙版本系統模組檢測 100% 完美通過！');
+console.log('🎉 全部 150 題與三版本（棒球版、麥塊版 ＆ Roblox 跑酷版）系統模組檢測 100% 完美通過！');
